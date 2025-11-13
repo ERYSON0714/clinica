@@ -13,7 +13,7 @@ const pool = mysql.createPool({
   ssl: process.env.DB_SSL === 'true' ? {} : false
 });
 
-// Test connection and initialize database
+// Test connection and initialize database (call manually via initDb)
 const initDb = async () => {
   try {
     const connection = await pool.getConnection();
@@ -146,6 +146,7 @@ const initDb = async () => {
   }
 };
 
-initDb();
-
+// Do not run initDb on import to avoid hard failures when DB credentials
+// are missing or incorrect. Export initDb so the app can call it at startup.
 module.exports = pool;
+module.exports.initDb = initDb;

@@ -4,7 +4,6 @@ class OfflineDB {
     this.dbName = 'clinica_offline';
     this.version = 3; // Incrementado para forçar upgrade e corrigir tabelas
     this.db = null;
-    this.lastSync = null;
     this.syncQueue = [];
     this.isOnline = navigator.onLine;
     this.init();
@@ -19,7 +18,6 @@ class OfflineDB {
       request.onsuccess = () => {
         this.db = request.result;
         console.log('Offline DB initialized');
-        this.loadLastSync();
         resolve();
       };
 
@@ -365,36 +363,6 @@ class OfflineDB {
     return this.delete('especialistas', id);
   }
 
-  // Consultas
-  async saveConsulta(consulta) {
-    consulta.id = consulta.id || `cons_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    return this.save('consultas', consulta);
-  }
-
-  async updateConsulta(id, updates) {
-    return this.update('consultas', id, updates);
-  }
-
-  async getConsultas() {
-    return this.getAll('consultas');
-  }
-
-  async getConsultasByPaciente(pacienteId) {
-    return this.getAll('consultas', 'paciente_id', pacienteId);
-  }
-
-  async getConsultasByEspecialista(especialistaId) {
-    return this.getAll('consultas', 'especialista_id', especialistaId);
-  }
-
-  async searchConsultas(query) {
-    return this.search('consultas', query, ['observacoes', 'diagnostico']);
-  }
-
-  async deleteConsulta(id) {
-    return this.delete('consultas', id);
-  }
-
   // Agendamentos
   async saveAgendamento(agendamento) {
     agendamento.id = agendamento.id || `ag_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -459,6 +427,25 @@ class OfflineDB {
 
   async getClinicaConfig() {
     return this.get('clinica_config', 'main_config');
+  }
+
+  // Métodos para gerenciar lastSync no IndexedDB
+  async loadLastSync() {
+    try {
+      const metadata = await this.get('sync_metadata', 'lastSync');
+      return metadata ? metadata.value : null;
+    } catch (e) {
+      console.warn('Erro ao carregar lastSync:', e);
+      return null;
+    }
+  }
+
+  async saveLastSync(timestamp) {
+    try {
+      await this.save('sync_metadata', { key: 'lastSync', value: timestamp });
+    } catch (e) {
+      console.error('Erro ao salvar lastSync:', e);
+    }
   }
 
   // Sistema de sincronização
@@ -528,33 +515,39 @@ class OfflineDB {
 
     switch (item.table) {
       case 'pacientes':
-        url = `${baseUrl}/storage/pacientes`;
-        method = item.operation === 'delete' ? 'DELETE' : 'POST';
-        body = item.operation === 'delete' ? { id: item.data.id } : item.data;
+        url = `${baseUrl}/sync/upload`;
+        method = 'POST';
+        body = { data: { pacientes: [item.data] } };
         break;
 
       case 'especialistas':
-        url = `${baseUrl}/storage/especialistas`;
-        method = item.operation === 'delete' ? 'DELETE' : 'POST';
-        body = item.operation === 'delete' ? { id: item.data.id } : item.data;
-        break;
-
-      case 'consultas':
-        url = `${baseUrl}/storage/consultas`;
-        method = item.operation === 'delete' ? 'DELETE' : 'POST';
-        body = item.operation === 'delete' ? { id: item.data.id } : item.data;
+        url = `${baseUrl}/sync/upload`;
+        method = 'POST';
+        body = { data: { especialistas: [item.data] } };
         break;
 
       case 'agendamentos':
-        url = `${baseUrl}/storage/agendamentos`;
-        method = item.operation === 'delete' ? 'DELETE' : 'POST';
-        body = item.operation === 'delete' ? { id: item.data.id } : item.data;
+        url = `${baseUrl}/sync/upload`;
+        method = 'POST';
+        body = { data: { agendamentos: [item.data] } };
         break;
 
-      case 'usuarios':
-        url = `${baseUrl}/storage/usuarios`;
-        method = item.operation === 'delete' ? 'DELETE' : 'POST';
-        body = item.operation === 'delete' ? { id: item.data.id } : item.data;
+      case 'clinica_config':
+        url = `${baseUrl}/sync/upload`;
+        method = 'POST';
+        body = { data: { clinica_config: item.data } };
+        break;
+
+      case 'historico':
+        url = `${baseUrl}/sync/upload`;
+        method = 'POST';
+        body = { data: { historico: [item.data] } };
+        break;
+
+      case 'comunicados':
+        url = `${baseUrl}/sync/upload`;
+        method = 'POST';
+        body = { data: { comunicados: [item.data] } };
         break;
 
       default:
@@ -593,10 +586,11 @@ class OfflineDB {
   // Método para verificar status da sincronização
   async getSyncStatus() {
     const queue = await this.getSyncQueue();
+    const lastSync = await this.loadLastSync();
     return {
       isOnline: this.isOnline,
       pendingItems: queue.length,
-      lastSync: localStorage.getItem('last_sync') || null
+      lastSync: lastSync
     };
   }
 
@@ -627,15 +621,12 @@ class OfflineDB {
       }
 
       // Enviar para nuvem e receber dados atualizados
-      const response = await fetch('/sync/sync', {
-        method: 'POST',
+      const lastSync = await this.loadLastSync();
+      const response = await fetch('/sync/download', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          localData,
-          lastSync: localStorage.getItem('lastSync')
-        })
+        }
       });
 
       if (!response.ok) {
@@ -658,7 +649,9 @@ class OfflineDB {
       }
 
       // Atualizar timestamp da última sincronização
-      localStorage.setItem('lastSync', result.lastSync);
+      if (result.lastSync) {
+        await this.saveLastSync(result.lastSync);
+      }
 
       return result;
     } catch (error) {

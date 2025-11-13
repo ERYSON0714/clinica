@@ -128,6 +128,7 @@ router.get('/:entity', async (req, res) => {
     const entity = req.params.entity;
     // if DB unavailable, always use adapter (filesystem fallback)
     const dbOk = await storageBackend.dbAvailable();
+    console.log('[storage GET] entity=', entity, 'dbOk=', dbOk);
     if (!dbOk) {
       const item = await storageBackend.getKey(entity);
       if (!item) return res.json({ key: entity, value: null });
@@ -166,6 +167,7 @@ router.post('/:entity', async (req, res) => {
     const data = req.body;
     // if DB unavailable, use adapter
     const dbOk = await storageBackend.dbAvailable();
+    console.log('[storage POST] entity=', entity, 'dbOk=', dbOk, 'body=', JSON.stringify(data));
     if (!dbOk) {
       const item = await storageBackend.setKey(entity, data);
       return res.json({ success: true, key: item.key, last_modified: item.last_modified });

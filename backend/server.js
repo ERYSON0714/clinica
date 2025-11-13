@@ -18,4 +18,15 @@ app.use('/sync', syncRouter);
 app.get('/', (req, res) => res.json({ ok: true, msg: 'Clinica backend minimal' }));
 
 const port = process.env.PORT || 3000;
+
+// Try to initialize DB in background; do not block server start.
+try {
+	const db = require('./db');
+	if (db && typeof db.initDb === 'function') {
+		db.initDb().then(() => console.log('DB init attempted')).catch(e => console.log('DB init error (non-fatal):', e && e.message));
+	}
+} catch (e) {
+	console.log('DB module load skipped:', e && e.message);
+}
+
 app.listen(port, () => console.log(`Clinica backend running on http://localhost:${port}`));
