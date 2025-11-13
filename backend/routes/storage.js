@@ -1,6 +1,9 @@
 const express = require('express');
-const pool = require('../db');
 const router = express.Router();
+
+function getPool() {
+  try { return require('../db'); } catch (e) { return null; }
+}
 
 // Helper function to get table name from entity
 const getTableName = (entity) => {
@@ -18,6 +21,8 @@ const getTableName = (entity) => {
 // Helper to check if a table exists in current database
 const tableExists = async (table) => {
   try {
+    const pool = getPool();
+    if (!pool) return false;
     const [rows] = await pool.query(`SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`, [table]);
     return rows && rows[0] && rows[0].c > 0;
   } catch (e) {
@@ -121,21 +126,36 @@ const storageBackend = require('../lib/storage_backend');
 router.get('/:entity', async (req, res) => {
   try {
     const entity = req.params.entity;
+    // if DB unavailable, always use adapter (filesystem fallback)
+    const dbOk = await storageBackend.dbAvailable();
+    if (!dbOk) {
+      const item = await storageBackend.getKey(entity);
+      if (!item) return res.json({ key: entity, value: null });
+      return res.json(item);
+    }
     const table = getTableName(entity);
-    const exists = await tableExists(table);
+    let exists = false;
+    try { exists = await tableExists(table); } catch (e) { exists = false; }
     if (!exists) {
-      // treat as key in client_storage (db or filesystem fallback)
       const item = await storageBackend.getKey(entity);
       if (!item) return res.json({ key: entity, value: null });
       return res.json(item);
     }
 
-    const [rows] = await pool.query(`SELECT * FROM ${table} ORDER BY last_modified DESC`);
-    const convertedRows = rows.map(row => convertRowToFrontend(row, table));
+    const pool = getPool();
+    const [rows] = pool ? await pool.query(`SELECT * FROM ${table} ORDER BY last_modified DESC`) : [ [] ];
+    const convertedRows = (rows || []).map(row => convertRowToFrontend(row, table));
     res.json(convertedRows);
   } catch (err) {
     console.error('storage get route error:', err);
-    res.status(500).json({ error: err.message });
+    // fallback to filesystem adapter on DB auth/availability errors
+    try {
+      const item = await storageBackend.getKey(req.params.entity);
+      if (!item) return res.json({ key: req.params.entity, value: null });
+      return res.json(item);
+    } catch (e) {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
@@ -143,14 +163,21 @@ router.get('/:entity', async (req, res) => {
 router.post('/:entity', async (req, res) => {
   try {
     const entity = req.params.entity;
-    const table = getTableName(entity);
     const data = req.body;
+    // if DB unavailable, use adapter
+    const dbOk = await storageBackend.dbAvailable();
+    if (!dbOk) {
+      const item = await storageBackend.setKey(entity, data);
+      return res.json({ success: true, key: item.key, last_modified: item.last_modified });
+    }
+    const table = getTableName(entity);
 
     if (!data || typeof data !== 'object') {
       return res.status(400).json({ error: 'Data object required' });
     }
 
-    const exists = await tableExists(table);
+    let exists = false;
+    try { exists = await tableExists(table); } catch (e) { exists = false; }
     if (!exists) {
       // upsert into client_storage using key = entity (db or filesystem fallback)
       const item = await storageBackend.setKey(entity, data);
@@ -162,13 +189,20 @@ router.post('/:entity', async (req, res) => {
     const values = Object.values(dbData);
     const placeholders = columns.map(() => '?').join(', ');
 
+    const pool = getPool();
     const query = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders}) ON DUPLICATE KEY UPDATE ${columns.map(col => `${col} = VALUES(${col})`).join(', ')}`;
-
+    if (!pool) throw new Error('Database pool not available');
     await pool.query(query, values);
     res.json({ success: true, id: data.id });
   } catch (err) {
     console.error('storage post route error:', err);
-    res.status(500).json({ error: err.message });
+    // fallback to adapter
+    try {
+      const item = await storageBackend.setKey(req.params.entity, req.body);
+      return res.json({ success: true, key: item.key, last_modified: item.last_modified });
+    } catch (e) {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
@@ -177,15 +211,17 @@ router.put('/:entity/:id', async (req, res) => {
   try {
     const entity = req.params.entity;
     const id = req.params.id;
-    const table = getTableName(entity);
     const data = req.body;
+    const dbOk = await storageBackend.dbAvailable();
+    const table = getTableName(entity);
 
     if (!data || typeof data !== 'object') {
       return res.status(400).json({ error: 'Data object required' });
     }
 
-    const exists = await tableExists(table);
-    if (!exists) {
+    let exists = false;
+    try { exists = await tableExists(table); } catch (e) { exists = false; }
+    if (!exists || !dbOk) {
       // update client_storage entry (db or filesystem fallback)
       const current = await storageBackend.getKey(entity);
       if (!current) return res.status(404).json({ error: 'Record not found' });
@@ -203,6 +239,8 @@ router.put('/:entity/:id', async (req, res) => {
     const setClause = columns.map(col => `${col} = ?`).join(', ');
     const query = `UPDATE ${table} SET ${setClause} WHERE id = ?`;
 
+    const pool = getPool();
+    if (!pool) throw new Error('Database pool not available');
     const [result] = await pool.query(query, values);
 
     if (result.affectedRows === 0) {
@@ -212,7 +250,12 @@ router.put('/:entity/:id', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('storage put route error:', err);
-    res.status(500).json({ error: err.message });
+    try {
+      await storageBackend.setKey(req.params.entity, req.body);
+      return res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
@@ -222,14 +265,18 @@ router.delete('/:entity/:id', async (req, res) => {
     const entity = req.params.entity;
     const id = req.params.id;
     const table = getTableName(entity);
-    const exists = await tableExists(table);
-    if (!exists) {
+    const dbOk = await storageBackend.dbAvailable();
+    let exists = false;
+    try { exists = await tableExists(table); } catch (e) { exists = false; }
+    if (!exists || !dbOk) {
       // delete a client_storage key (db or filesystem fallback)
       const ok = await storageBackend.deleteKey(entity);
       if (!ok) return res.status(404).json({ error: 'Record not found' });
       return res.json({ success: true });
     }
 
+    const pool = getPool();
+    if (!pool) throw new Error('Database pool not available');
     const [result] = await pool.query(`DELETE FROM ${table} WHERE id = ?`, [id]);
 
     if (result.affectedRows === 0) {
@@ -239,7 +286,13 @@ router.delete('/:entity/:id', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('storage delete route error:', err);
-    res.status(500).json({ error: err.message });
+    try {
+      const ok = await storageBackend.deleteKey(req.params.entity);
+      if (!ok) return res.status(404).json({ error: 'Record not found' });
+      return res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
@@ -247,6 +300,7 @@ router.delete('/:entity/:id', async (req, res) => {
 router.get('/:entity/search', async (req, res) => {
   try {
     const entity = req.params.entity;
+    const dbOk = await storageBackend.dbAvailable();
     const table = getTableName(entity);
     const { q, ...filters } = req.query;
 
@@ -282,8 +336,9 @@ router.get('/:entity/search', async (req, res) => {
     });
 
     query += ' ORDER BY last_modified DESC';
-    const exists = await tableExists(table);
-    if (!exists) {
+    let exists = false;
+    try { exists = await tableExists(table); } catch (e) { exists = false; }
+    if (!exists || !dbOk) {
       // for client_storage, use adapter to search or return all
       if (q) {
         const all = await storageBackend.listAll();
@@ -294,6 +349,8 @@ router.get('/:entity/search', async (req, res) => {
       return res.json(all);
     }
 
+    const pool = getPool();
+    if (!pool) throw new Error('Database pool not available');
     const [rows] = await pool.query(query, params);
 
     // Convert rows to frontend format
@@ -302,7 +359,12 @@ router.get('/:entity/search', async (req, res) => {
     res.json(convertedRows);
   } catch (err) {
     console.error('storage search route error:', err);
-    res.status(500).json({ error: err.message });
+    try {
+      const all = await storageBackend.listAll();
+      return res.json(all);
+    } catch (e) {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
