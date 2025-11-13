@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestão - CLÍNICA ETEMFL</title>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
+
+  <style>
+    :root{
+      --primary:#28a745;
+      --accent:#ffc107;
+      --dark:#155724;
+      --light:#f8f9fa;
+      --white:#ffffff;
+      --muted:#6c757d;
+      --border:#e6e6e6;
+      --danger:#dc3545;
+      --blue:#007bff;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{font-family:Inter, "Segoe UI", Tahoma, Helvetica, Arial; background:var(--light); color:#222; line-height:1.3}
+    .app { display:flex; min-height:100vh; gap:18px; }
+    .sidebar { width:300px; background:var(--dark); color:#fff; padding:20px; display:flex; flex-direction:column; }
+    .logo { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .logo .icon { width:44px; height:44; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center; color:var(--dark); font-weight:700 }
+    .nav { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+    .nav a { color:#fff; text-decoration:none; padding:10px; border-radius:8px; display:flex; gap:8px; align-items:center; }
+    .nav a:hover, .nav a.active { background: rgba(255,255,255,0.06); }
+    .main { flex:1; padding:22px; }
+    .card { background:var(--white); padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); margin-bottom:16px; }
+    h1{ color:var(--primary); font-size:1.2rem; margin-bottom:12px; }
+    .form-group{ margin-bottom:10px; }
+    label{ display:block; font-weight:700; margin-bottom:6px; }
+    input[type="text"], input[type="date"], input[type="number"], input[type="password"], select, textarea { width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:0.95rem; }
+    button{ cursor:pointer; border:none; border-radius:8px; padding:8px 12px; font-weight:700; }
+    .btn { background:var(--primary); color:#fff; }
+    .btn-muted { background:#f0f0f0; color:#222; }
+    .btn-danger { background:var(--danger); color:#fff; }
+    .btn-blue { background:var(--blue); color:#fff; }
+    .grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+    .spec-card { padding:12px; border:1px solid var(--border); border-radius:8px; background:#fff; }
+    table{ width:100%; border-collapse:collapse; font-size:0.95rem; }
+    th,td{ padding:10px; border-bottom:1px solid var(--border); text-align:left; vertical-align:middle; }
+    .actions{ display:flex; gap:8px; justify-content:flex-end; }
+    .status{ padding:6px 10px; border-radius:12px; font-weight:800; font-size:0.85rem; }
+    .pending{ background:#fff3cd; color:#856404; }
+    .confirmed{ background:#d4edda; color:#155724; }
+    .canceled{ background:#f8d7da; color:#721c24; }
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; opacity:0; visibility:hidden; transition:all .12s; }
+    .overlay.show{ opacity:1; visibility:visible; }
+    .modal{ width:960px; max-width:96%; max-height:90vh; overflow:auto; background:#fff; border-radius:10px; padding:16px; }
+    .modal.small-modal { width: 500px; }
+    .small{ font-size:0.85rem; color:#6c757d; }
+    .muted{ color:var(--muted); }
+    .contact-card { background:#fff; color:#000 !important; padding:16px; border-radius:12px; border:1px solid var(--border); box-shadow:0 6px 18px rgba(0,0,0,0.08); margin-top:20px; }
+    .contact-card * { color:#000 !important; }
+    .contact-card .clinic-name{ font-weight:800; font-size:1rem; }
+    .contact-card .clinic-line{ font-size:0.92rem; margin-top:6px; }
+    .sync-status { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #dc3545; }
+    .sync-dot.online { background: #28a745; }
+    .sync-button { background: none; border: none; color: #fff; cursor: pointer; padding: 4px; border-radius: 4px; }
+    .sync-button:hover { background: rgba(255,255,255,0.1); }
+    @media(max-width:900px){ .sidebar{ display:none } .grid{ grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); } }
+
+    pre.history {
+      background: #f9f9f9;       
+      border: 1px solid #ddd;    
+      border-radius: 8px;        
+      padding: 12px;             
+      font-family: "Courier New", monospace; 
+      font-size: 14px;           
+      color: #222;              
+      white-space: pre-wrap;    
+      margin-bottom: 10px;       
+    }
+
+    .history-item, #histList > div {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: "Courier New", monospace;
+      font-size: 14px;
+      color: #222;
+      margin-bottom: 10px;
+    }
+</style>
+
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" role="navigation" aria-label="Menu principal">
+      <div class="logo">
+        <div class="icon" id="brandIcon">G</div>
+        <div>
+          <div id="brandTitle" class="brand-title">Plataforma</div>
+          <div id="brandSub" class="brand-sub">GESTOR</div>
+        </div>
+        <div id="sync-status" class="sync-status">
+          <div class="sync-indicator" id="sync-indicator">
+            <span class="sync-dot" id="sync-dot"></span>
+            <span class="sync-text" id="sync-text">Offline</span>
+          </div>
+          <button id="sync-button" class="sync-button" title="Sincronizar dados">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Navegação">
+        <a href="#" class="active" data-page="dashboard"><i class="fas fa-home"></i> PAINEL DE VAGAS</a>
+        <a href="#" data-page="agendamentos"><i class="fas fa-calendar-check"></i> Agendamentos</a>
+        <a href="#" data-page="incluir-especialista"><i class="fas fa-user-md"></i> Incluir Especialista</a>
+        <a href="#" data-page="especialistas"><i class="fas fa-users"></i> Especialistas</a>
+        <a href="#" data-page="cadastro-paciente"><i class="fas fa-user-plus"></i> Cadastro de Paciente</a>
+        <a href="#" data-page="comunicados"><i class="fas fa-bullhorn"></i> Comunicados</a>
+        <a href="#" data-page="atendimentos-dia"><i class="fas fa-calendar-day"></i> Atendimentos do Dia</a>
+        <a href="#" data-page="historico-geral"><i class="fas fa-history"></i> Histórico Geral</a>
+        <a href="#" data-page="config"><i class="fas fa-cog"></i> Clinica / Gestor </a>
+      </nav>
+
+      <div class="contact-card" id="clinicContact">
+        <div class="clinic-name" id="clinicName">— Sem dados cadastrados —</div>
+        <div class="clinic-line" id="clinicAddress"></div>
+        <div class="clinic-line" id="clinicPhone"></div>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <section id="dashboard" class="card">
+        <h1>PAINEL — Vagas Disponíveis por Especialidade</h1>
+        <div id="vagasGrid" class="grid"></div>
+        <div class="small" style="margin-top:8px">Clique em uma especialidade para visualizar vagas e horários da semana subsequente. O sistema oferece a primeira vaga disponível — o usuário só confirma.</div>
+      </section>
+
+      <section id="agendamentos" class="card" style="display:none">
+        <h1>Agendamentos</h1>
+        <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input id="filterCPF" placeholder="Filtrar por CPF (000.000.000-00)" style="width:200px;padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+          <input id="filterSUS" placeholder="Filtrar por Cartão SUS (000.0000.0000.0000)" style="width:240px;padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+          <input id="filterDateFrom" type="date" style="padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+          <input id="filterDateTo" type="date" style="padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+          <button id="btnApplyFilters" class="btn">Aplicar</button>
+          <button id="btnClearFilters" class="btn-muted">Limpar</button>
+          <div style="margin-left:auto" class="small">Ordenado por data de criação</div>
+        </div>
+
+        <div style="margin-bottom:12px; display:flex; gap:8px;">
+            <button id="btnBulkConfirm" class="btn">Confirmar Selecionados</button>
+            <button id="btnBulkCancel" class="btn-danger">Cancelar Selecionados</button>
+        </div>
+
+        <table aria-live="polite">
+          <thead>
+            <tr>
+              <th style="width:20px"><input type="checkbox" id="selectAllAg" /></th>
+              <th>Paciente</th>
+              <th>CPF / SUS</th>
+              <th>Especialidade</th>
+              <th>Especialista</th>
+              <th>Data da Consulta</th>
+              <th>Criado em</th>
+              <th>Status</th>
+              <th style="width:260px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="agendamentosTbody"></tbody>
+        </table>
+      </section>
+
+      <section id="incluir-especialista" class="card" style="display:none">
+        <h1>Incluir / Editar Especialista</h1>
+        <form id="formEspecialista">
+          <input type="hidden" id="espId" value="" />
+          <div class="form-group"><label>Nome do especialista</label><input id="espNome" type="text" placeholder="Ex: Dra. Maria Silva" required /></div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Especialidade</label>
+              <select id="espEspecialidade" required>
+                <option value="">-- Selecione --</option>
+                <option value="Médico">Médico</option>
+                <option value="Dentista">Dentista</option>
+                <option value="Psicólogo">Psicólogo</option>
+                <option value="Nutricionista">Nutricionista</option>
+                <option value="Fonoaudiólogo">Fonoaudiólogo</option>
+                <option value="Médico Veterinário">Médico Veterinário</option>
+                <option value="Fisioterapeuta">Fisioterapeuta</option>
+                <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div style="flex:1" class="form-group"><label id="conselhoLabel">Conselho Regional</label><input id="espConselho" type="text" placeholder="Ex: 12345" /></div>
+          </div>
+          <div class="form-group"><label>Turno</label>
+            <div style="display:flex;gap:12px;">
+              <label><input type="radio" name="espTurno" value="manhã" checked /> Manhã</label>
+              <label><input type="radio" name="espTurno" value="tarde" /> Tarde</label>
+              <label><input type="radio" name="espTurno" value="ambos" /> Ambos</label>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Vagas por dia — Manhã</label><input id="espVagasManha" type="number" value="20" min="0" /></div>
+            <div style="flex:1" class="form-group"><label>Vagas por dia — Tarde</label><input id="espVagasTarde" type="number" value="20" min="0" /></div>
+          </div>
+          <div class="form-group"><label>Dias da semana</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <label><input class="dayChk" type="checkbox" value="1" /> Seg</label>
+              <label><input class="dayChk" type="checkbox" value="2" /> Ter</label>
+              <label><input class="dayChk" type="checkbox" value="3" /> Qua</label>
+              <label><input class="dayChk" type="checkbox" value="4" /> Qui</label>
+              <label><input class="dayChk" type="checkbox" value="5" /> Sex</label>
+              <label><input class="dayChk" type="checkbox" value="6" /> Sáb</label>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" id="btnSaveEspecialista" class="btn">Salvar</button>
+            <button type="button" id="btnCancelEspecialista" class="btn-muted">Cancelar</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="especialistas" class="card" style="display:none">
+        <h1>Especialistas Cadastrados</h1>
+        <div id="especialistasGrid" class="grid"></div>
+      </section>
+
+      <section id="cadastro-paciente" class="card" style="display:none">
+        <h1>Cadastro de Paciente</h1>
+        <form id="formPaciente">
+          <div class="form-group"><label>Nome</label><input id="pacNome" type="text" required /></div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Data de Nascimento</label><input id="pacNascimento" type="date" /></div>
+            <div style="flex:1" class="form-group"><label>CPF</label><input id="pacCpf" type="text" maxlength="14" placeholder="000.000.000-00" /></div>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Carteira SUS</label><input id="pacSus" type="text" maxlength="19" placeholder="000.0000.0000.0000" /></div>
+            <div style="flex:1" class="form-group"><label>Bairro (vinculado a setor)</label><select id="pacBairro"></select></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" id="btnSavePaciente" class="btn">Cadastrar</button>
+            <button type="button" id="btnClearPaciente" class="btn-muted">Limpar</button>
+          </div>
+        </form>
+
+        <div style="margin-top:16px">
+          <h3>Pacientes cadastrados</h3>
+          <table id="pacientesTable">
+            <thead><tr><th>Nome</th><th>Data Nasc</th><th>CPF</th><th>SUS</th><th>Bairro (Setor)</th><th>Origem</th><th>Ações</th></tr></thead>
+            <tbody id="pacientesTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="comunicados" class="card" style="display:none">
+        <h1>Comunicados</h1>
+        <form id="formComunicado">
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Título</label><input id="comTitulo" type="text" /></div>
+            <div style="width:220px" class="form-group"><label>Setor</label>
+              <select id="comSetor"><option value="">Todos</option><option value="A1">Setor A1</option><option value="B2">Setor B2</option><option value="C3">Setor C3</option><option value="D4">Setor D4</option><option value="E5">Setor E5</option></select>
+            </div>
+          </div>
+          <div class="form-group"><label>Mensagem</label><textarea id="comMensagem" rows="4"></textarea></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button id="btnSendCom" class="btn">Enviar Comunicado</button>
+            <button id="btnClearCom" class="btn-muted">Limpar</button>
+          </div>
+        </form>
+        <div id="comList" style="margin-top:12px;"></div>
+      </section>
+
+      <section id="atendimentos-dia" class="card" style="display:none">
+        <h1>Atendimentos do Dia</h1>
+        <div class="card">
+          <div><strong>Setor de Atendimento do Dia:</strong> <span id="setorAtendimentoHoje">Nenhum</span></div>
+          <div id="atendimentosHojeList" style="margin-top:8px">Nenhum atendimento agendado para hoje neste setor.</div>
+        </div>
+      </section>
+
+      <section id="historico-geral" class="card" style="display:none">
+        <h1>Histórico Geral</h1>
+
+        <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:10px;">
+          <div style="flex:1">
+            <label>Tipo de Ação</label>
+            <select id="histTipo">
+              <option value="">Todos</option>
+              <option value="especialista">Especialista</option>
+              <option value="paciente">Paciente</option>
+              <option value="agendamento">Agendamento</option>
+              <option value="confirmacao">Confirmação/Cancelamento</option>
+              <option value="comunicado">Comunicado</option>
+              <option value="config">Configuração</option>
+            </select>
+          </div>
+          <div><label>Data início</label><input id="histDataInicio" type="date" /></div>
+          <div><label>Data fim</label><input id="histDataFim" type="date" /></div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button id="btnAplicarHist" class="btn">Aplicar</button>
+            <button id="btnLimparHist" class="btn-muted">Limpar</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+          <button id="btnOpenRedefinir" class="btn-danger">Redefinir Sistema</button>
+        </div>
+
+        <div id="histList"></div>
+      </section>
+
+      <section id="config" class="card" style="display:none">
+        <h1>Configurações da Clínica</h1>
+        <form id="formConfig">
+          <div class="form-group"><label>Nome da Clínica</label><input id="cfgNome" type="text" /></div>
+          <div class="form-group"><label>Endereço</label><input id="cfgEndereco" type="text" /></div>
+          <div class="form-group"><label>Telefone</label><input id="cfgTelefone" type="text" /></div>
+
+          <div class="form-group">
+            <label>Senha Mestre (criar/alterar)</label>
+            <input id="cfgMaster" type="password" placeholder="Senha Mestre (mínimo 6 caracteres)" />
+            <div class="small">A Senha Mestre é usada para redefinir o sistema. Guarde-a com segurança.</div>
+          </div>
+
+          <div class="form-group">
+            <label>Setor da Clínica</label>
+            <select id="cfgSetor"><option value="">-- Selecione --</option><option value="A1">A1</option><option value="B2">B2</option><option value="C3">C3</option><option value="D4">D4</option><option value="E5">E5</option></select>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button id="btnSaveCfg" type="button" class="btn">Salvar</button>
+            <button id="btnOpenRedefinirFromConfig" type="button" class="btn-danger">Redefinir Sistema</button>
+          </div>
+        </form>
+      </section>
+
+    </main>
+  </div>
+
+  <div id="vagasModal" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 id="vagasModalTitle">Vagas</h3>
+      <div id="vagasModalContent" style="margin-top:8px;"></div>
+      <hr />
+      <h4>Agendar (sistema sugere a primeira vaga disponível da semana subsequente)</h4>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input id="agNome" placeholder="Nome do paciente" style="flex:2;padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+        <input id="agCPF" placeholder="000.000.000-00" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+        <input id="agSUS" placeholder="000.0000.0000.0000" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+        <button id="btnAgendarGestor" class="btn">Agendar Próxima Vaga</button>
+        <button id="btnCloseVagas" class="btn-muted">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ticketModal" class="overlay" aria-hidden="true">
+    <div class="modal">
+      <h3>Comprovante</h3>
+      <div id="ticketBody" style="margin-top:8px;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
+        <button id="btnPrintTicket" class="btn-blue">Imprimir / Salvar PDF</button>
+        <button id="btnCloseTicket" class="btn-muted">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="redefineModal" class="overlay" aria-hidden="true">
+    <div class="modal">
+      <h3>Redefinir Sistema</h3>
+      <p class="small">Atenção: esta ação apagará todo conteúdo do sistema (especialistas, pacientes, agendamentos, histórico e comunicados). Esta ação NÃO pode ser desfeita.</p>
+      <div class="form-group" style="margin-top:8px;">
+        <label>Digite a Senha Mestre para confirmar</label>
+        <input id="redefinePassword" type="password" placeholder="Senha Mestre" />
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+        <button id="btnConfirmRedefine" class="btn-danger">Redefinir Sistema</button>
+        <button id="btnCancelRedefine" class="btn-muted">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="cancelModal" class="overlay" aria-hidden="true">
+    <div class="modal small-modal">
+      <h3>Motivo do Cancelamento</h3>
+      <p class="small">Selecione o motivo do cancelamento. O usuário será notificado.</p>
+      <div class="form-group" style="margin-top:8px;">
+        <label>Motivo</label>
+        <select id="cancelReasonSelect">
+          <option value="Especialista indisponível">Especialista Indisponível</option>
+          <option value="Readequação de agenda médica">Readequação de Agenda Médica</option>
+          <option value="Clínica fechada no dia">Clínica Fechada no Dia</option>
+          <option value="Pendência de documentação do paciente">Problemas Relacionados à Equipe da Clínica</option>
+          <option value="Autorização do convênio pendente">Autorização do Convênio Pendente</option>
+          <option value="Reagendamento solicitado pelo especialista">Reagendamento Solicitado pelo Especialista</option>
+          <option value="Erro no agendamento">Questões Administrativas ou Operacionais</option>
+          <option value="Motivo clínico do paciente">Situações de Emergência ou Força Maior</option>
+          <option value="outro">Outro (especificar abaixo)</option>
+        </select>
+      </div>
+      <div class="form-group" id="otherReasonGroup" style="display:none;">
+        <label>Especifique o Motivo</label>
+        <textarea id="cancelReasonOther" rows="3"></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+        <button id="btnConfirmCancel" class="btn-danger">Confirmar Cancelamento</button>
+        <button id="btnCancelCancel" class="btn-muted">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="sync.js"></script>
+  <script>
+    const LS = {
+      PAC: 'db_pacientes_v3',
+      ESP: 'db_especialistas_v3',
+      AG:  'db_agendamentos_v3',
+      CFG: 'db_config_v3',
+      HIST:'db_history_v1',
+      COM: 'db_comunicados_v1'
+    };
+    
+    let agIdsToAction = []; 
+    const pad2 = n => (n < 10 ? '0' + n : '' + n);
+    function formatDateTime(iso){
+      const d = new Date(iso);
+      return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}, ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    }
+    function formatDateDDMMYYYY(isoOrDate){
+      const d = (typeof isoOrDate === 'string') ? new Date(isoOrDate + 'T00:00:00') : new Date(isoOrDate);
+      return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
+    }
+    function toISODateString(d){
+      const date = new Date(d);
+      date.setHours(0,0,0,0);
+      return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`;
+    }
+    // Storage bridge: tenta sincronizar com servidor (tabela client_storage). Se servidor indisponível, usa localStorage.
+    let serverStorage = {};
+    let serverAvailable = false;
+
+    async function loadServerStorage(){
+      try{
+        const resp = await fetch('/storage/all');
+        if(!resp.ok) throw new Error('not ok');
+        serverStorage = await resp.json();
+        serverAvailable = true;
+        // sincronizar para localStorage para compatibilidade com código existente
+        Object.keys(serverStorage).forEach(k => { try { localStorage.setItem(k, JSON.stringify(serverStorage[k])); } catch(e){} });
+        console.log('Storage carregado do servidor e sincronizado com localStorage.');
+      } catch(e){
+        serverAvailable = false;
+        serverStorage = {};
+        console.warn('Não foi possível carregar storage do servidor, fallback para localStorage.');
+      }
+    }
+
+    function read(key){
+      // Retorna sincronizado do serverStorage se disponível, copie para evitar referência
+      if(serverAvailable){
+        try { return JSON.parse(JSON.stringify((serverStorage[key] === undefined) ? [] : serverStorage[key])); } catch(e) { return serverStorage[key] || []; }
+      }
+      try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e){ return []; }
+    }
+
+    function write(key, value){
+      // Atualiza local imediatamente
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) { /* ignore */ }
+      // Atualiza cache local e tenta persistir no servidor (assíncrono)
+      serverStorage[key] = value;
+      if(serverAvailable){
+        fetch('/storage/' + encodeURIComponent(key), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value })
+        }).catch(err => { console.warn('Falha ao salvar storage no servidor:', err.message); serverAvailable = false; });
+      }
+    }
+    function genId(){ return 'id_' + Math.random().toString(36).slice(2,10); }
+    function nowISO(){ return new Date().toISOString(); }
+    function generateSlots(startHour, endHour, interval=15){
+      const slots = [];
+      for(let h=startHour; h<endHour; h++){
+        for(let m=0; m<60; m+=interval) slots.push(`${pad2(h)}:${pad2(m)}`);
+      }
+      return slots;
+    }
+    const MORNING_SLOTS = generateSlots(7,12,15);
+    const AFTERNOON_SLOTS = generateSlots(12,17,15);
+    function getLimitedSlots(shift, limit){
+      if(limit <= 0) return [];
+      if(shift === 'manhã') return MORNING_SLOTS.slice(0, limit);
+      if(shift === 'tarde') return AFTERNOON_SLOTS.slice(0, limit);
+      return [];
+    }
+
+    const SETORES = {
+      A1: ['Centro','São Francisco','Nossa Senhora das Dores','Nossa Senhora de Fátima','Nossa Senhora de Lourdes','Salgado','Maurício de Nassau','Divinópolis','Riachão','Santa Rosa'],
+      B2: ['Cedro','Indianópolis','Morada do Sol','Jardim Pinheiros','Serraria','Vila do Aeroporto','Agamenon Magalhães','Vassoural','Rendeiras','Cidade Alta'],
+      C3: ['São João da Escócia','Petrópolis','Kennedy','Boa Vista','Morro do Bom Jesus','Loteamento São Francisco','Loteamento Recanto do Sol'],
+      D4: ['José Carlos de Oliveira','José Rosa','Cidade Jardim','Novo Horizonte','Santa Cruz','Caruaru Velho','Loteamento Cruzeiro','Loteamento Planalto','Loteamento Vila Bela','Loteamento Cidade Nova'],
+      E5: ['Distrito Industrial','Vila Kennedy','Cajá','Loteamento Cajá Extensão','Loteamento Novo Cajá','Loteamento Morada Nova','Sítio Farias','Sítio Salgado','Sítio Lucas','Sítio Riacho Doce']
+    };
+
+    function populateBairros(){
+      const sel = document.getElementById('pacBairro');
+      if(!sel) return;
+      sel.innerHTML = '<option value=\"\">Escolha o bairro</option>';
+      Object.keys(SETORES).forEach(setor => {
+        SETORES[setor].forEach(bairro => {
+          const opt = document.createElement('option');
+          opt.value = JSON.stringify({ bairro, setor });
+          opt.textContent = `${bairro} (${setor})`;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    function initDefaultsIfEmpty(){
+      const cfgRaw = localStorage.getItem(LS.CFG);
+      if(cfgRaw === null){
+        write(LS.CFG, { nomeClinica:'', endereco:'', telefone:'', setor:'', masterHash: null });
+      } else {
+        try {
+          const cfg = JSON.parse(cfgRaw) || {};
+          cfg.nomeClinica = cfg.nomeClinica || '';
+          cfg.endereco = cfg.endereco || '';
+          cfg.telefone = cfg.telefone || '';
+          cfg.setor = cfg.setor || '';
+          if(!('masterHash' in cfg)) cfg.masterHash = null;
+          write(LS.CFG, cfg);
+        } catch(e){
+          write(LS.CFG, { nomeClinica:'', endereco:'', telefone:'', setor:'', masterHash: null });
+        }
+      }
+      if(!Array.isArray(read(LS.ESP))) write(LS.ESP, []);
+      if(!Array.isArray(read(LS.PAC))) write(LS.PAC, []);
+      if(!Array.isArray(read(LS.AG))) write(LS.AG, []);
+      if(!Array.isArray(read(LS.HIST))) write(LS.HIST, []);
+      if(!Array.isArray(read(LS.COM))) write(LS.COM, []);
+    }
+
+    function addHistory(type, actor, summary, payload){
+      const hist = read(LS.HIST);
+      hist.push({ id: genId(), type, actor, timestamp: nowISO(), summary, payload });
+      write(LS.HIST, hist);
+    }
+
+    function getAvailabilityForSpecialistOnDate(especialista, dateISO){
+      if(!especialista || !Array.isArray(especialista.dias) || !especialista.dias.length) return [];
+      const dateObj = new Date(dateISO + 'T00:00:00');
+      const dow = dateObj.getDay();
+      if(!especialista.dias.includes(dow)) return [];
+      let allowed = [];
+      if(especialista.turno === 'manhã' || especialista.turno === 'ambos'){
+        allowed = allowed.concat(getLimitedSlots('manhã', especialista.vagasManha || 0));
+      }
+      if(especialista.turno === 'tarde' || especialista.turno === 'ambos'){
+        allowed = allowed.concat(getLimitedSlots('tarde', especialista.vagasTarde || 0));
+      }
+      const ags = read(LS.AG);
+      const taken = ags.filter(a => a.especialistaId === especialista.id && a.data === dateISO && a.status !== 'Cancelado').map(a => a.hora);
+      return allowed.filter(s => !taken.includes(s));
+    }
+
+    function getMonday(date){
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = (day === 0) ? -6 : (1 - day);
+      d.setDate(d.getDate() + diff);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    function findEarliestSlotNextWeek(especialidade){
+      const specs = read(LS.ESP).filter(s => s.especialidade === especialidade && s.ativo !== false);
+      if(!specs.length) return null;
+      const monday = getMonday(new Date());
+      const nextWeekStart = new Date(monday); nextWeekStart.setDate(monday.getDate() + 7);
+      for(let d=0; d<7; d++){
+        const day = new Date(nextWeekStart); day.setDate(nextWeekStart.getDate() + d);
+        const iso = toISODateString(day);
+        for(const sp of specs){
+          if(!sp.dias || !sp.dias.includes(day.getDay())) continue;
+          const av = getAvailabilityForSpecialistOnDate(sp, iso);
+          if(av.length > 0) return { especialista: sp, dateISO: iso, time: av[0] };
+        }
+      }
+      return null;
+    }
+
+    function renderClinicContact(){
+      const cfgRaw = localStorage.getItem(LS.CFG);
+      let cfg = {};
+      if(cfgRaw){
+        try { cfg = JSON.parse(cfgRaw) || {}; } catch(e){ cfg = {}; }
+      }
+      const nameEl = document.getElementById('clinicName');
+      const addrEl = document.getElementById('clinicAddress');
+      const phoneEl = document.getElementById('clinicPhone');
+      nameEl.textContent = cfg.nomeClinica || '';
+      addrEl.textContent = cfg.endereco || '';
+      phoneEl.textContent = cfg.telefone || '';
+      const card = document.getElementById('clinicContact');
+      if(card){ card.style.color = '#000'; card.style.background = '#fff'; }
+      if(!(cfg.nomeClinica || cfg.endereco || cfg.telefone)){
+        nameEl.textContent = '— Sem dados cadastrados —';
+        addrEl.textContent = '';
+        phoneEl.textContent = '';
+      }
+    }
+
+    function renderVagasPanel(){
+      const grid = document.getElementById('vagasGrid');
+      grid.innerHTML = '';
+      const specs = read(LS.ESP).filter(s => s.ativo !== false);
+      if(!specs.length){
+        grid.innerHTML = '<div class="card small">Nenhuma especialidade cadastrada. Use "Incluir Especialista" para adicionar.</div>';
+        return;
+      }
+
+      const bySpec = {};
+      specs.forEach(s => {
+        bySpec[s.especialidade] = bySpec[s.especialidade] || [];
+        bySpec[s.especialidade].push(s);
+      });
+      Object.keys(bySpec).forEach(especialidade => {
+        const specsList = bySpec[especialidade];
+        let total = 0;
+        const monday = getMonday(new Date());
+        const nextWeekStart = new Date(monday); nextWeekStart.setDate(monday.getDate() + 7);
+        for(let i=0;i<7;i++){
+          const day = new Date(nextWeekStart); day.setDate(nextWeekStart.getDate() + i);
+          const iso = toISODateString(day);
+          specsList.forEach(sp => total += getAvailabilityForSpecialistOnDate(sp, iso).length);
+        }
+
+        const card = document.createElement('div');
+        card.className = 'spec-card card';
+        card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+          <div><strong style="text-transform:capitalize">${especialidade}</strong></div>
+          <div class="small">Vagas (7d)</div>
+        </div>
+        <div style="font-weight:800;font-size:1.3rem">${total}</div>
+        <div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="btn" data-especialidade="${especialidade}">Abrir</button></div>`;
+        card.querySelector('button').addEventListener('click', ()=> openVagasModal(especialidade));
+        grid.appendChild(card);
+      });
+    }
+
+    function renderEspecialistasGrid(){
+      const grid = document.getElementById('especialistasGrid');
+      grid.innerHTML = '';
+      const specs = read(LS.ESP);
+      if(!specs.length){ grid.innerHTML = '<div class="small">Nenhum especialista cadastrado.</div>'; return; }
+      specs.forEach(sp => {
+        const dias = (sp.dias || []).map(d => ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d]).join(', ');
+        let total = 0;
+        const monday = getMonday(new Date());
+        const nextWeek = new Date(monday); nextWeek.setDate(monday.getDate() + 7);
+        for(let i=0;i<7;i++){
+          const day = new Date(nextWeek); day.setDate(nextWeek.getDate() + i);
+          total += getAvailabilityForSpecialistOnDate(sp, toISODateString(day)).length;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'spec-card';
+        card.innerHTML = `<div style="display:flex;justify-content:space-between">
+          <div>
+            <h3>${sp.nome}</h3>
+            <div class="small">Especialidade: <strong>${sp.especialidade}</strong>${sp.conselho ? ' • Conselho: <strong>' + sp.conselho + '</strong>' : ''}</div>
+            <div class="small">Turno: <strong>${sp.turno}</strong> • Dias: <strong>${dias}</strong></div>
+          </div>
+          <div style="text-align:right">
+            <div class="small">Vagas (7d)</div>
+            <div style="font-weight:800;font-size:1.1rem">${total}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+          <button class="btn-muted" data-edit="${sp.id}"><i class="fas fa-edit"></i> Editar</button>
+          <button class="btn-danger" data-delete="${sp.id}"><i class="fas fa-trash"></i> Excluir</button>
+        </div>`;
+        grid.appendChild(card);
+      });
+      grid.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', e => {
+        const id = e.currentTarget.dataset.edit; loadEspecialistaToForm(id); showPage('incluir-especialista');
+      }));
+      grid.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', e => {
+        const id = e.currentTarget.dataset.delete; deleteEspecialista(id);
+      }));
+    }
+
+    function renderAgendamentosTable(filters = {}){
+      const tbody = document.getElementById('agendamentosTbody');
+      tbody.innerHTML = '';
+      let ags = read(LS.AG).slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+      if(filters.cpf) ags = ags.filter(a => (a.pacienteCpf || '').includes(filters.cpf.replace(/\D/g,'')));
+      if(filters.sus) ags = ags.filter(a => (a.pacienteSus || '').includes(filters.sus.replace(/\D/g,'')));
+      if(filters.dateFrom) ags = ags.filter(a => a.data >= filters.dateFrom);
+      if(filters.dateTo) ags = ags.filter(a => a.data <= filters.dateTo);
+      ags.forEach(a => {
+        const tr = document.createElement('tr');
+        const createdStr = `Criado em: ${formatDateTime(a.createdAt)} • ${a.agendadoPorGestor ? 'Gestor' : 'Usuário'}`;
+        const canConfirm = a.status === 'Pendente' || a.status === 'Cancelado';
+        tr.innerHTML = `
+          <td><input type="checkbox" class="agCheckbox" value="${a.id}" /></td>
+          <td>${a.pacienteNome}</td>
+          <td class="small">${formatCPFDisplay(a.pacienteCpf)}<br/>${formatSUSDisplay(a.pacienteSus)}</td>
+          <td>${a.especialidade}</td>
+          <td>${a.especialistaNome}</td>
+          <td>${formatDateDDMMYYYY(a.data)} às ${a.hora}</td>
+          <td class="small">${createdStr}</td>
+          <td><span class="status ${a.status === 'Confirmado' ? 'confirmed' : a.status === 'Cancelado' ? 'canceled' : 'pending'}">${a.status}</span></td>
+          <td class="actions">
+            ${canConfirm ? `<button class="btn" data-confirm="${a.id}">Confirmar</button>` : ''}
+            ${a.status !== 'Cancelado' ? `<button class="btn-danger" data-cancel="${a.id}">Cancelar</button>` : ''}
+            <button class="btn-blue" data-print="${a.id}">Imprimir</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll('[data-confirm]').forEach(b => b.addEventListener('click', e => confirmAppointments([e.currentTarget.dataset.confirm])));
+      tbody.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('click', e => openCancelModal([e.currentTarget.dataset.cancel])));
+      tbody.querySelectorAll('[data-print]').forEach(b => b.addEventListener('click', e => printAgendamento(e.currentTarget.dataset.print)));
+    }
+
+    function formatCPFDisplay(cpf){
+      if(!cpf) return '-';
+      const s = cpf.toString();
+      const p = s.replace(/\D/g,'').padStart(11,'0');
+      return `${p.slice(0,3)}.${p.slice(3,6)}.${p.slice(6,9)}-${p.slice(9,11)}`;
+    }
+
+    function formatSUSDisplay(sus){
+      if(!sus) return '-';
+      const s = sus.toString().replace(/\D/g,'');
+      if(s.length < 15) return s;
+      return `${s.slice(0,3)}.${s.slice(3,7)}.${s.slice(7,11)}.${s.slice(11,15)}`;
+    }
+
+    function checkDuplicatePatient(cpf, sus, exceptId = null){
+      const pacs = read(LS.PAC) || [];
+      const cpfDigits = (cpf || '').replace(/\D/g,'');
+      const susDigits = (sus || '').replace(/\D/g,'');
+      for(const p of pacs){
+        if(exceptId && p.id === exceptId) continue;
+        if(p.cpf && p.cpf === cpfDigits) return { duplicate:true, field:'cpf', existing: p };
+        if(p.sus && susDigits && p.sus === susDigits) return { duplicate:true, field:'sus', existing: p };
+      }
+      return null;
+    }
+
+    function renderPacientesTable(){
+      const tbody = document.getElementById('pacientesTbody');
+      tbody.innerHTML = '';
+      const pacs = read(LS.PAC).slice().sort((a,b)=> a.nome.localeCompare(b.nome));
+      if(!pacs.length){ tbody.innerHTML = '<tr><td colspan="7" class="small">Nenhum paciente cadastrado.</td></tr>'; return; }
+      pacs.forEach(p => {
+        const tr = document.createElement('tr');
+        const bairroInfo = p.bairro ? `${p.bairro} (${p.setor || '-'})` : '-';
+        tr.innerHTML = `<td>${p.nome}</td>
+          <td>${p.nascimento ? formatDateDDMMYYYY(p.nascimento) : '-'}</td>
+          <td>${formatCPFDisplay(p.cpf)}</td>
+          <td>${formatSUSDisplay(p.sus)}</td>
+          <td>${bairroInfo}</td>
+          <td>${p.createdBy === 'usuario' ? 'Usuário' : 'Gestor'}</td>
+          <td class="actions"><button class="btn" data-editpac="${p.id}">Editar</button><button class="btn-danger" data-deletepac="${p.id}">Excluir</button></td>`;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll('[data-editpac]').forEach(b => b.addEventListener('click', e => {
+        const id = e.currentTarget.dataset.editpac; loadPacienteToForm(id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }));
+      tbody.querySelectorAll('[data-deletepac]').forEach(b => b.addEventListener('click', e => {
+        const id = e.currentTarget.dataset.deletepac; deletePaciente(id);
+      }));
+    }
+
+    function renderHistoricoList(){
+      const container = document.getElementById('histList');
+      container.innerHTML = '';
+      let list = read(LS.HIST).slice().sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const tipo = document.getElementById('histTipo').value;
+      const inicio = document.getElementById('histDataInicio').value;
+      const fim = document.getElementById('histDataFim').value;
+      if(tipo) list = list.filter(l => l.type === tipo);
+      if(inicio) list = list.filter(l => l.timestamp.slice(0,10) >= inicio);
+      if(fim) list = list.filter(l => l.timestamp.slice(0,10) <= fim);
+      if(!list.length){ container.innerHTML = '<div class="small">Nenhum registro encontrado para os filtros.</div>'; return; }
+      list.forEach(entry => {
+        const row = document.createElement('div');
+        row.className = 'history-item';
+        const ts = formatDateTime(entry.timestamp);
+        let html = `<div style="display:flex;justify-content:space-between"><div><strong>Criado em: ${ts}</strong></div><div class="small">${entry.actor}</div></div>`;
+        if(entry.type === 'agendamento' && entry.payload && entry.payload.agendamento){
+          const ag = entry.payload.agendamento;
+          html += `<div style="margin-top:8px"><strong>Ação:</strong> Agendamento criado</div>
+            <div><strong>Nome:</strong> ${ag.pacienteNome}</div>
+            <div><strong>CPF:</strong> ${formatCPFDisplay(ag.pacienteCpf)} • <strong>Cartão SUS:</strong> ${formatSUSDisplay(ag.pacienteSus)}</div>
+            <div><strong>Data:</strong> ${formatDateDDMMYYYY(ag.data)} • <strong>Hora:</strong> ${ag.hora}</div>
+            <div><strong>Especialidade:</strong> ${ag.especialidade} • <strong>Especialista:</strong> ${ag.especialistaNome}</div>`;
+        } else if(entry.type === 'paciente' && entry.payload && entry.payload.paciente){
+          const p = entry.payload.paciente;
+          html += `<div style="margin-top:8px"><strong>Ação:</strong> ${entry.summary}</div>
+            <div><strong>Nome:</strong> ${p.nome} • <strong>CPF:</strong> ${formatCPFDisplay(p.cpf)} • <strong>SUS:</strong> ${formatSUSDisplay(p.sus)}</div>
+            <div><strong>Origem:</strong> ${p.createdBy || 'Gestor'}</div>`;
+        } else if(entry.type === 'especialista' && entry.payload && entry.payload.especialista){
+          const s = entry.payload.especialista;
+          html += `<div style="margin-top:8px"><strong>Ação:</strong> ${entry.summary}</div>
+            <div><strong>Especialista:</strong> ${s.nome} • <strong>Especialidade:</strong> ${s.especialidade} • <strong>Turno:</strong> ${s.turno}</div>`;
+        } else if(entry.type === 'confirmacao' && entry.payload && entry.payload.agendamento){
+          const ag = entry.payload.agendamento;
+          html += `<div style="margin-top:8px"><strong>Ação:</strong> ${entry.summary}</div>
+            <div><strong>Nome:</strong> ${ag.pacienteNome} • <strong>Data/Hora:</strong> ${formatDateDDMMYYYY(ag.data)} ${ag.hora}</div>
+            <div><strong>Especialidade:</strong> ${ag.especialidade} • <strong>Especialista:</strong> ${ag.especialistaNome}</div>
+            ${ag.cancelReason ? `<div><strong>Motivo:</strong> ${ag.cancelReason}</div>` : ''}`;
+        } else {
+          html += `<div style="margin-top:8px"><strong>Ação:</strong> ${entry.summary}</div>`;
+        }
+        row.innerHTML = html;
+        container.appendChild(row);
+      });
+    }
+
+    function renderComunicados(){
+      const container = document.getElementById('comList');
+      const list = read(LS.COM) || [];
+      if(!list.length){ container.innerHTML = '<div class="small">Nenhum comunicado.</div>'; return; }
+      container.innerHTML = list.slice().reverse().map(c => `<div style="padding:8px;border-bottom:1px dashed var(--border)"><div style="font-weight:700">${c.titulo}</div><div class="small">${c.mensagem}</div><div class="small">Setor: ${c.setor || 'Todos'} • ${formatDateTime(c.createdAt)}</div></div>`).join('');
+    }
+
+    function renderAtendimentosDoDia(){
+      const cfg = JSON.parse(localStorage.getItem(LS.CFG) || '{}');
+      document.getElementById('setorAtendimentoHoje').textContent = cfg.setor || 'Nenhum';
+      const hojeISO = toISODateString(new Date());
+      let ags = read(LS.AG).filter(a => a.data === hojeISO && a.status !== 'Cancelado');
+      if(cfg.setor){
+        const pacs = read(LS.PAC);
+        ags = ags.filter(a => {
+          const p = pacs.find(px => px.cpf === a.pacienteCpf);
+          return p && p.setor === cfg.setor;
+        });
+      }
+
+      const hc = document.getElementById('atendimentosHojeList');
+      if(!ags.length) { hc.innerHTML = '<div class="small">Nenhum atendimento agendado para hoje neste setor.</div>'; return; }
+      hc.innerHTML = '<ul>' + ags.map(a => `<li>${a.pacienteNome} • ${a.hora} • ${a.especialistaNome} • ${a.status}</li>`).join('') + '</ul>';
+    }
+
+    function openVagasModal(especialidade){
+      document.getElementById('vagasModal').classList.add('show');
+      document.getElementById('vagasModalTitle').textContent = 'Vagas — ' + especialidade;
+      const content = document.getElementById('vagasModalContent'); content.innerHTML = '';
+      const specs = read(LS.ESP).filter(s => s.especialidade === especialidade && s.ativo !== false);
+      if(!specs.length){ content.innerHTML = '<div class="small">Nenhum especialista cadastrado para essa especialidade.</div>'; return; }
+      const monday = getMonday(new Date()); const nextWeekStart = new Date(monday); nextWeekStart.setDate(monday.getDate() + 7);
+      for(let i=0;i<7;i++){
+        const day = new Date(nextWeekStart); day.setDate(nextWeekStart.getDate() + i);
+        const iso = toISODateString(day);
+        const dowName = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][day.getDay()];
+        let totalSlots = 0; const perSpec = [];
+        specs.forEach(sp => { const av = getAvailabilityForSpecialistOnDate(sp, iso); if(av.length) perSpec.push({ nome: sp.nome, slots: av }); totalSlots += av.length; });
+        const box = document.createElement('div'); box.style.borderBottom='1px solid var(--border)'; box.style.padding='8px 0';
+        box.innerHTML = `<div style="display:flex;justify-content:space-between"><div><strong>${dowName} — ${formatDateDDMMYYYY(iso)}</strong></div><div class="small">Vagas: <strong>${totalSlots}</strong></div></div>`;
+        if(perSpec.length){ const listDiv = document.createElement('div'); listDiv.style.marginTop='8px'; perSpec.forEach(ps => { const el = document.createElement('div'); 
+        el.style.marginBottom='6px'; el.innerHTML = `<div style="font-weight:700">${ps.nome}</div><div class="small">Horários: ${ps.slots.slice(0,8).join(' ')}${ps.slots.length>8 ? ' ...' : ''}</div>`; listDiv.appendChild(el); }); box.appendChild(listDiv); }
+        else { const none = document.createElement('div'); none.className='small'; none.textContent='Sem horários disponíveis neste dia'; box.appendChild(none); }
+        content.appendChild(box);
+      }
+    }
+
+    document.getElementById('btnCloseVagas').addEventListener('click', ()=> {
+      document.getElementById('vagasModal').classList.remove('show');
+      document.getElementById('agNome').value = ''; document.getElementById('agCPF').value = ''; document.getElementById('agSUS').value = '';
+    })
+
+    function openRedefineModal(){ document.getElementById('redefineModal').classList.add('show'); document.getElementById('redefinePassword').value = ''; }
+    function closeRedefineModal(){ document.getElementById('redefineModal').classList.remove('show'); document.getElementById('redefinePassword').value = ''; }
+    document.getElementById('btnOpenRedefinir').addEventListener('click', ()=> { if(!confirm('Atenção: esta ação abrirá a tela para redefinir o sistema (apagar todos os dados). Deseja continuar?')) return; openRedefineModal(); });
+    document.getElementById('btnOpenRedefinirFromConfig').addEventListener('click', ()=> { if(!confirm('Atenção: esta ação abrirá a tela para redefinir o sistema (apagar todos os dados). Deseja continuar?')) return; openRedefineModal(); });
+    document.getElementById('btnCancelRedefine').addEventListener('click', closeRedefineModal);
+    document.getElementById('btnAgendarGestor').addEventListener('click', ()=>{
+      const nome = document.getElementById('agNome').value.trim();
+      const cpfRaw = document.getElementById('agCPF').value.trim();
+      const susRaw = document.getElementById('agSUS').value.trim();
+      const cpf = cpfRaw.replace(/\D/g,'');
+      const sus = susRaw.replace(/\D/g,'');
+      if(!nome || !cpf){ alert('Informe Nome e CPF do paciente.'); return; }
+      const especialidade = document.getElementById('vagasModalTitle').textContent.replace('Vagas — ','').trim();
+      const suggestion = findEarliestSlotNextWeek(especialidade);
+      if(!suggestion){ alert('Não há vagas na semana subsequente. Tente novamente a partir da próxima segunda-feira.'); return; }
+      const pacs = read(LS.PAC);
+      let pac = pacs.find(p => p.cpf === cpf);
+      if(!pac){
+        pac = { id: genId(), nome, nascimento:'', cpf, sus, bairro:'', setor:'', createdBy:'gestor', notifications: [] };
+        pacs.push(pac); write(LS.PAC, pacs); addHistory('paciente','Gestor',`Cadastro de paciente: ${nome}`, { paciente: pac });
+      }
+
+      const ags = read(LS.AG);
+      const novo = {
+        id: genId(),
+        pacienteId: pac.id,
+        pacienteNome: pac.nome,
+        pacienteCpf: pac.cpf,
+        pacienteSus: pac.sus || sus || '',
+        especialistaId: suggestion.especialista.id,
+        especialistaNome: suggestion.especialista.nome,
+        especialidade: suggestion.especialista.especialidade,
+        data: suggestion.dateISO,
+        hora: suggestion.time,
+        createdAt: nowISO(),
+        status: 'Confirmado', 
+        agendadoPorGestor: true,
+        clinicSnapshot: JSON.parse(localStorage.getItem(LS.CFG) || '{}')
+      }
+
+      ags.push(novo); write(LS.AG, ags);
+      addHistory('agendamento','Gestor',`Agendamento confirmado pelo Gestor para ${pac.nome}`, { agendamento: novo });
+      const pacIdx = pacs.findIndex(p => p.id === pac.id);
+      if(pacIdx > -1) {
+        pacs[pacIdx].notifications = pacs[pacIdx].notifications || []; 
+        pacs[pacIdx].notifications.push({ id: genId(), titulo:'Agendamento Confirmado', mensagem:`Sua consulta com ${novo.especialistaNome} para ${formatDateDDMMYYYY(novo.data)} às ${novo.hora} foi confirmada.`, createdAt: nowISO() });
+        write(LS.PAC, pacs);
+      }
+
+      document.getElementById('vagasModal').classList.remove('show');
+      renderVagasPanel(); renderEspecialistasGrid(); renderAgendamentosTable(); renderHistoricoList();
+      openTicketModal(novo); alert('Agendamento criado e confirmado. O usuário foi notificado.');
+    });
+
+    function openTicketModal(ag){
+      const overlay = document.getElementById('ticketModal');
+      const body = document.getElementById('ticketBody');
+      const cfg = JSON.parse(localStorage.getItem(LS.CFG) || '{}');
+      body.innerHTML = `<div style="padding:12px;border-radius:8px;border:1px dashed var(--border)">
+        <div style="font-weight:800">${cfg.nomeClinica || ''}</div>
+        <div class="small">${cfg.endereco || ''} • ${cfg.telefone || ''}</div>
+        <hr>
+        <div><strong>Criado em:</strong> ${formatDateTime(ag.createdAt)} • <strong>${ag.status}</strong></div>
+        <div><strong>Agendado por:</strong> ${ag.agendadoPorGestor ? 'Gestor' : 'Usuário'}</div>
+        <div><strong>Nome:</strong> ${ag.pacienteNome}</div>
+        <div><strong>CPF:</strong> ${formatCPFDisplay(ag.pacienteCpf)}</div>
+        <div><strong>Cartão SUS:</strong> ${formatSUSDisplay(ag.pacienteSus)}</div>
+        <div><strong>Data da Consulta:</strong> ${formatDateDDMMYYYY(ag.data)}</div>
+        <div><strong>Hora:</strong> ${ag.hora}</div>
+        <div><strong>Especialidade:</strong> ${ag.especialidade}</div>
+        <div><strong>Especialista:</strong> ${ag.especialistaNome}</div>
+        ${ag.status === 'Cancelado' && ag.cancelReason ? `<div style="margin-top:8px"><strong>Motivo do Cancelamento:</strong> ${ag.cancelReason}</div>` : ''}
+      </div>`;
+      overlay.classList.add('show');
+      document.getElementById('btnPrintTicket').onclick = () => {
+        const win = window.open('','PRINT','height=700,width=900');
+        win.document.write('<html><head><title>Comprovante</title>');
+        win.document.write('<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px} .small{font-size:12px;color:#444}</style>');
+        win.document.write('</head><body>');
+        win.document.write(document.getElementById('ticketBody').innerHTML);
+        win.document.write('</body></html>');
+        win.document.close();
+        win.focus();
+        win.print();
+      };
+      document.getElementById('btnCloseTicket').onclick = () => overlay.classList.remove('show');
+    }
+
+    function confirmAppointments(ids) {
+        if (!ids || ids.length === 0) return;
+
+        const ags = read(LS.AG);
+        const pacs = read(LS.PAC);
+        let confirmedCount = 0;
+        
+        ids.forEach(id => {
+            const ag = ags.find(a => a.id === id);
+            if (ag && (ag.status === 'Pendente' || ag.status === 'Cancelado')) {
+                ag.status = 'Confirmado';
+                delete ag.cancelReason; 
+
+                addHistory('confirmacao', 'Gestor', `Agendamento confirmado: ${ag.pacienteNome}`, { agendamento: ag });
+
+                const patient = pacs.find(p => p.cpf === ag.pacienteCpf);
+                if (patient) {
+                    patient.notifications = patient.notifications || [];
+                    patient.notifications.push({
+                        id: genId(),
+                        titulo: 'Agendamento Confirmado',
+                        mensagem: `Seu agendamento em ${formatDateDDMMYYYY(ag.data)} às ${ag.hora} foi confirmado.`,
+                        createdAt: nowISO()
+                    });
+                }
+                confirmedCount++;
+            }
+        });
+
+        if (confirmedCount > 0) {
+            write(LS.AG, ags);
+            write(LS.PAC, pacs);
+            alert(`${confirmedCount} agendamento(s) confirmado(s) com sucesso!`);
+            renderAgendamentosTable();
+            renderHistoricoList();
+        }
+    }
+
+    function openCancelModal(ids) {
+        if (!ids || ids.length === 0) return alert('Nenhum agendamento selecionado.');
+        agIdsToAction = ids;
+        document.getElementById('cancelModal').classList.add('show');
+        document.getElementById('cancelReasonOther').value = '';
+        document.getElementById('cancelReasonSelect').value = 'Especialista indisponível';
+        document.getElementById('otherReasonGroup').style.display = 'none';
+    }
+
+    function processCancellation() {
+        let reason = document.getElementById('cancelReasonSelect').value;
+        if (reason === 'outro') {
+            reason = document.getElementById('cancelReasonOther').value.trim();
+            if (!reason) return alert('Por favor, especifique o motivo do cancelamento.');
+        }
+
+        const ags = read(LS.AG);
+        const pacs = read(LS.PAC);
+        let updatedCount = 0;
+        agIdsToAction.forEach(id => {
+            const ag = ags.find(a => a.id === id);
+            if (ag && ag.status !== 'Cancelado') {
+                ag.status = 'Cancelado';
+                ag.cancelReason = reason;
+                addHistory('confirmacao', 'Gestor', `Agendamento cancelado: ${ag.pacienteNome}`, { agendamento: ag });
+                const patient = pacs.find(p => p.cpf === ag.pacienteCpf);
+                if (patient) {
+                    patient.notifications = patient.notifications || [];
+                    patient.notifications.push({
+                        id: genId(),
+                        titulo: 'Agendamento Cancelado',
+                        mensagem: `Sua consulta em ${formatDateDDMMYYYY(ag.data)} às ${ag.hora} foi cancelada. Motivo: ${reason}`,
+                        createdAt: nowISO()
+                    });
+                }
+                updatedCount++;
+            }
+        });
+        
+        if(updatedCount > 0) {
+            write(LS.AG, ags);
+            write(LS.PAC, pacs);
+            alert(`${updatedCount} agendamento(s) cancelado(s) e notificação enviada.`);
+        }
+
+        document.getElementById('cancelModal').classList.remove('show');
+        renderAgendamentosTable();
+        renderHistoricoList();
+        renderVagasPanel();
+        agIdsToAction = [];
+    }
+    
+    document.getElementById('btnConfirmCancel').addEventListener('click', processCancellation);
+    document.getElementById('btnCancelCancel').addEventListener('click', () => {
+        document.getElementById('cancelModal').classList.remove('show');
+        agIdsToAction = [];
+    })
+
+    document.getElementById('cancelReasonSelect').addEventListener('change', (e) => {
+        document.getElementById('otherReasonGroup').style.display = (e.target.value === 'outro') ? 'block' : 'none';
+    })
+
+    function printAgendamento(id){ const ags = read(LS.AG); const ag = ags.find(a => a.id === id); 
+        if(!ag) return alert('Agendamento não encontrado.'); openTicketModal(ag); }
+    document.getElementById('btnSaveEspecialista').addEventListener('click', ()=>{
+      const id = document.getElementById('espId').value;
+      const nome = document.getElementById('espNome').value.trim();
+      const especialidade = document.getElementById('espEspecialidade').value.trim();
+      const conselho = document.getElementById('espConselho').value.trim();
+      const turno = document.querySelector('input[name="espTurno"]:checked').value;
+      const vagasManha = parseInt(document.getElementById('espVagasManha').value) || 0;
+      const vagasTarde = parseInt(document.getElementById('espVagasTarde').value) || 0;
+      const dias = Array.from(document.querySelectorAll('.dayChk')).filter(c=>c.checked).map(c=>Number(c.value));
+      if(!nome || !especialidade || dias.length===0){ alert('Preencha nome, especialidade e selecione pelo menos um dia.'); return; }
+      const specs = read(LS.ESP);
+      if(id){
+        const idx = specs.findIndex(s => s.id === id);
+        if(idx >= 0){
+          const before = Object.assign({}, specs[idx]);
+          specs[idx].nome = nome; specs[idx].especialidade = especialidade; specs[idx].conselho = conselho; specs[idx].turno = turno;
+          specs[idx].vagasManha = vagasManha; specs[idx].vagasTarde = vagasTarde; specs[idx].dias = dias; specs[idx].ativo = true;
+          write(LS.ESP, specs); addHistory('especialista','Gestor',`Especialista editado: ${nome}`, { before, after: specs[idx] });
+        }
+      } else {
+        const novo = { id: genId(), nome, especialidade, conselho, turno, vagasManha, vagasTarde, dias, ativo:true };
+        specs.push(novo); write(LS.ESP, specs); addHistory('especialista','Gestor',`Especialista incluído: ${nome}`, { especialista: novo });
+      }
+
+      document.getElementById('formEspecialista').reset(); document.getElementById('espId').value = '';
+      renderVagasPanel(); renderEspecialistasGrid(); renderHistoricoList(); alert('Especialista salvo.');
+    });
+
+    function loadEspecialistaToForm(id){
+      const specs = read(LS.ESP); const sp = specs.find(s => s.id === id);
+      if(!sp) return alert('Especialista não encontrado.');
+      document.getElementById('espId').value = sp.id; document.getElementById('espNome').value = sp.nome; 
+      document.getElementById('espEspecialidade').value = sp.especialidade;
+      document.getElementById('espConselho').value = sp.conselho || '';
+      document.querySelectorAll('input[name="espTurno"]').forEach(r => r.checked = (r.value === sp.turno));
+      document.getElementById('espVagasManha').value = sp.vagasManha || 0; document.getElementById('espVagasTarde').value = sp.vagasTarde || 0;
+      document.querySelectorAll('.dayChk').forEach(ch => ch.checked = (sp.dias || []).includes(Number(ch.value)));
+    }
+
+    function deleteEspecialista(id){
+      if(!confirm('Confirma exclusão do especialista?')) return;
+      let specs = read(LS.ESP); const sp = specs.find(s => s.id === id);
+      specs = specs.filter(s => s.id !== id); write(LS.ESP, specs);
+      addHistory('especialista','Gestor',`Especialista excluído: ${sp ? sp.nome : id}`, { especialista: sp });
+      renderVagasPanel(); renderEspecialistasGrid(); renderAgendamentosTable(); renderHistoricoList(); alert('Especialista excluído.');
+    }
+
+    document.getElementById('btnCancelEspecialista').addEventListener('click', ()=> { document.getElementById('formEspecialista').reset(); 
+    document.getElementById('espId').value = ''; showPage('especialistas'); });
+    function maskCpf(v){ return v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2').slice(0,14); }
+    function maskSus(v){ return v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{4})(\d)/,'$1.$2').replace(/(\d{4})(\d)/,'$1.$2').slice(0,19); }
+    document.getElementById('pacCpf').addEventListener('input', e => e.target.value = maskCpf(e.target.value));
+    document.getElementById('pacSus').addEventListener('input', e => e.target.value = maskSus(e.target.value));
+    document.getElementById('btnSavePaciente').addEventListener('click', ()=>{
+      const nome = document.getElementById('pacNome').value.trim();
+      const nasc = document.getElementById('pacNascimento').value;
+      const cpf = document.getElementById('pacCpf').value.replace(/\D/g,'');
+      const sus = document.getElementById('pacSus').value.replace(/\D/g,'');
+      const bairroRaw = document.getElementById('pacBairro').value;
+      if(!nome || !cpf || !bairroRaw){ alert('Preencha Nome, CPF e Bairro.'); return; }
+      const bairroObj = JSON.parse(bairroRaw);
+      const dup = checkDuplicatePatient(cpf, sus);
+      if(dup){ alert(`Já existe um paciente com esse ${dup.field.toUpperCase()} (Nome: ${dup.existing.nome}).`); return; }
+      const pacs = read(LS.PAC);
+      const novo = { id: genId(), nome, nascimento: nasc, cpf, sus, bairro: bairroObj.bairro, setor: bairroObj.setor, createdBy: 'gestor', notifications: [] };
+      pacs.push(novo); write(LS.PAC, pacs);
+      addHistory('paciente','Gestor',`Cadastro de paciente: ${nome}`, { paciente: novo });
+      renderPacientesTable(); document.getElementById('formPaciente').reset(); alert('Paciente cadastrado.');
+    })
+
+    function loadPacienteToForm(id){
+      const pacs = read(LS.PAC); const p = pacs.find(x => x.id === id);
+      if(!p) return alert('Paciente não encontrado.');
+      document.getElementById('pacNome').value = p.nome; document.getElementById('pacNascimento').value = p.nascimento || '';
+      document.getElementById('pacCpf').value = formatCPFDisplay(p.cpf); document.getElementById('pacSus').value = formatSUSDisplay(p.sus);
+      if(p.bairro && p.setor){
+        const optVal = JSON.stringify({ bairro: p.bairro, setor: p.setor });
+        const sel = document.getElementById('pacBairro');
+        for(const o of sel.options){ if(o.value === optVal){ sel.value = optVal; break; } }
+      }
+
+      const btn = document.getElementById('btnSavePaciente');
+      btn.textContent = 'Atualizar';
+      btn.onclick = () => updatePaciente(id);
+    }
+
+    function updatePaciente(id){
+      const nome = document.getElementById('pacNome').value.trim();
+      const nasc = document.getElementById('pacNascimento').value;
+      const cpf = document.getElementById('pacCpf').value.replace(/\D/g,'');
+      const sus = document.getElementById('pacSus').value.replace(/\D/g,'');
+      const bairroRaw = document.getElementById('pacBairro').value;
+      if(!nome || !cpf || !bairroRaw){ alert('Preencha Nome, CPF e Bairro.'); return; }
+      const bairroObj = JSON.parse(bairroRaw);
+      const dup = checkDuplicatePatient(cpf, sus, id);
+      if(dup){ alert(`Já existe um paciente com esse ${dup.field.toUpperCase()} (Nome: ${dup.existing.nome}).`); return; }
+      const pacs = read(LS.PAC); const idx = pacs.findIndex(p => p.id === id);
+      if(idx < 0) return alert('Paciente não encontrado.');
+      const before = Object.assign({}, pacs[idx]);
+      pacs[idx].nome = nome; pacs[idx].nascimento = nasc; pacs[idx].cpf = cpf; pacs[idx].sus = sus; pacs[idx].bairro = bairroObj.bairro; pacs[idx].setor = bairroObj.setor;
+      write(LS.PAC, pacs); addHistory('paciente','Gestor',`Paciente editado: ${nome}`, { before, after: pacs[idx] });
+      document.getElementById('formPaciente').reset(); document.getElementById('btnSavePaciente').textContent = 'Cadastrar'; 
+      document.getElementById('btnSavePaciente').onclick = null;
+      bindPacienteSaveDefault();
+      renderPacientesTable(); alert('Paciente atualizado.');
+    }
+
+    function deletePaciente(id){
+      if(!confirm('Confirma exclusão do paciente? Esta ação também removerá possíveis agendamentos relacionados.')) return;
+      let pacs = read(LS.PAC); const p = pacs.find(x => x.id === id);
+      pacs = pacs.filter(x => x.id !== id); write(LS.PAC, pacs);
+      let ags = read(LS.AG); ags = ags.filter(a => a.pacienteCpf !== p.cpf); write(LS.AG, ags);
+      addHistory('paciente','Gestor',`Paciente excluído: ${p ? p.nome : id}`, { paciente: p });
+      renderPacientesTable(); renderAgendamentosTable(); renderHistoricoList(); alert('Paciente excluído.');
+    }
+
+    function bindPacienteSaveDefault(){
+      const btn = document.getElementById('btnSavePaciente');
+      btn.onclick = () => {
+        const nome = document.getElementById('pacNome').value.trim();
+        const nasc = document.getElementById('pacNascimento').value;
+        const cpf = document.getElementById('pacCpf').value.replace(/\D/g,'');
+        const sus = document.getElementById('pacSus').value.replace(/\D/g,'');
+        const bairroRaw = document.getElementById('pacBairro').value;
+        if(!nome || !cpf || !bairroRaw){ alert('Preencha Nome, CPF e Bairro.'); return; }
+        const bairroObj = JSON.parse(bairroRaw);
+        const dup = checkDuplicatePatient(cpf, sus);
+        if(dup){ alert(`Já existe um paciente com esse ${dup.field.toUpperCase()} (Nome: ${dup.existing.nome}).`); return; }
+        const pacs = read(LS.PAC); const novo = { id: genId(), nome, nascimento: nasc, cpf, sus, bairro: bairroObj.bairro, setor: bairroObj.setor, createdBy: 'gestor', notifications: [] };
+        pacs.push(novo); write(LS.PAC, pacs); addHistory('paciente','Gestor',`Cadastro de paciente: ${nome}`, { paciente: novo });
+        renderPacientesTable(); document.getElementById('formPaciente').reset(); alert('Paciente cadastrado.');
+      };
+    }
+
+    bindPacienteSaveDefault();
+    document.getElementById('btnSendCom').addEventListener('click', ()=>{
+      const titulo = document.getElementById('comTitulo').value.trim(); const mensagem = document.getElementById('comMensagem').value.trim(); 
+      const setor = document.getElementById('comSetor').value;
+      if(!titulo || !mensagem){ alert('Preencha título e mensagem.'); return; }
+      const com = { id: genId(), titulo, mensagem, setor, createdAt: nowISO() };
+      const list = read(LS.COM); list.push(com); write(LS.COM, list);
+      addHistory('comunicado','Gestor',`Comunicado enviado: ${titulo}`, { comunicado: com });
+      const pacs = read(LS.PAC); pacs.forEach(p => { if(!setor || p.setor === setor){ p.notifications = p.notifications || []; 
+        p.notifications.push({ id: genId(), titulo, mensagem, createdAt: nowISO() }); } }); write(LS.PAC, pacs);
+      renderComunicados(); document.getElementById('formComunicado').reset(); alert('Comunicado enviado.');
+    });
+
+    document.getElementById('btnClearCom').addEventListener('click', ()=> document.getElementById('formComunicado').reset());
+    async function hashPasswordHex(password){
+      const enc = new TextEncoder(); const data = enc.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+      return hashHex;
+    }
+
+    document.getElementById('btnSaveCfg').addEventListener('click', async ()=>{
+      const nome = document.getElementById('cfgNome').value.trim();
+      const endereco = document.getElementById('cfgEndereco').value.trim();
+      const telefone = document.getElementById('cfgTelefone').value.trim();
+      const setor = document.getElementById('cfgSetor').value;
+      const masterInput = document.getElementById('cfgMaster').value;
+      const cfgRaw = localStorage.getItem(LS.CFG); const cfg = cfgRaw ? JSON.parse(cfgRaw) : {};
+      if(!cfg.masterHash && !masterInput){ return alert('Ao criar as configurações é obrigatório cadastrar uma Senha Mestre.'); }
+      if(masterInput){
+        if(masterInput.length < 6) { alert('Senha Mestre deve ter pelo menos 6 caracteres.'); return; }
+        const masterHash = await hashPasswordHex(masterInput);
+        cfg.masterHash = masterHash;
+      }
+      cfg.nomeClinica = nome || cfg.nomeClinica || '';
+      cfg.endereco = endereco || cfg.endereco || '';
+      cfg.telefone = telefone || cfg.telefone || '';
+      cfg.setor = setor || cfg.setor || '';
+      localStorage.setItem(LS.CFG, JSON.stringify(cfg));
+      addHistory('config','Gestor','Configurações alteradas', { config: cfg });
+      renderClinicContact(); alert('Configurações salvas. Senha Mestre criada/atualizada se fornecida.'); document.getElementById('cfgMaster').value = '';
+    })
+
+    document.getElementById('btnConfirmRedefine').addEventListener('click', async ()=>{
+      const password = document.getElementById('redefinePassword').value;
+      if(!password){ alert('Informe a Senha Mestre para confirmar.'); return; }
+      const cfgRaw = localStorage.getItem(LS.CFG); const cfg = cfgRaw ? JSON.parse(cfgRaw) : {};
+      if(!cfg.masterHash){ alert('Nenhuma Senha Mestre cadastrada. Não é possível redefinir.'); return; }
+      const hash = await hashPasswordHex(password);
+      if(hash !== cfg.masterHash){ alert('Senha Mestre incorreta. Ação cancelada.'); return; }
+      if(!confirm('Última confirmação: esta ação irá apagar TODOS os dados do sistema e não poderá ser desfeita. Deseja continuar?')) return;
+      localStorage.removeItem(LS.ESP); localStorage.removeItem(LS.PAC); localStorage.removeItem(LS.AG); localStorage.removeItem(LS.HIST); localStorage.removeItem(LS.COM);
+      // limpar config por completo (sem dados padrão)
+      localStorage.setItem(LS.CFG, JSON.stringify({ nomeClinica:'', endereco:'', telefone:'', setor:'', masterHash: null }));
+      closeRedefineModal();
+      alert('Sistema redefinido com sucesso. A página será recarregada.');
+      location.reload();
+    })
+
+    function applyMasks(){
+      document.querySelectorAll('input').forEach(inp => {
+        const id = (inp.id || '').toLowerCase();
+        try {
+          if(id.includes('cpf')) IMask(inp, { mask: '000.000.000-00' });
+          if(id.includes('sus')) IMask(inp, { mask: '000.0000.0000.0000' });
+          if(id.includes('telefone') || id.includes('phone')) IMask(inp, { mask: '(00) 00000-0000' });
+        } catch(e){}
+      });
+    }
+
+    function showPage(page){
+      const pages = ['dashboard','agendamentos','incluir-especialista','especialistas','cadastro-paciente','comunicados','atendimentos-dia','historico-geral','config'];
+      pages.forEach(p => { const el = document.getElementById(p); if(el) el.style.display = (p === page) ? 'block' : 'none'; });
+      document.querySelectorAll('.nav a').forEach(x => x.classList.remove('active'));
+      const activeLink = document.querySelector(`.nav a[data-page="${page}"]`);
+      if(activeLink) activeLink.classList.add('active');
+      if(page === 'dashboard') renderVagasPanel();
+      if(page === 'especialistas') renderEspecialistasGrid();
+      if(page === 'agendamentos') renderAgendamentosTable();
+      if(page === 'cadastro-paciente') { populateBairros(); renderPacientesTable(); }
+      if(page === 'comunicados') renderComunicados();
+      if(page === 'atendimentos-dia') renderAtendimentosDoDia();
+      if(page === 'historico-geral') renderHistoricoList();
+      if(page === 'config'){ const cfg = JSON.parse(localStorage.getItem(LS.CFG) || '{}'); 
+      document.getElementById('cfgNome').value = cfg.nomeClinica || ''; document.getElementById('cfgEndereco').value = cfg.endereco || ''; 
+      document.getElementById('cfgTelefone').value = cfg.telefone || ''; document.getElementById('cfgSetor').value = cfg.setor || ''; 
+      document.getElementById('cfgMaster').value = ''; }
+    }
+
+    document.querySelectorAll('.nav a').forEach(a => a.addEventListener('click', e => { e.preventDefault(); showPage(a.dataset.page); }));
+    document.getElementById('btnApplyFilters').addEventListener('click', ()=> {
+      const cpf = document.getElementById('filterCPF').value; const sus = document.getElementById('filterSUS').value;
+      const ffrom = document.getElementById('filterDateFrom').value; const fto = document.getElementById('filterDateTo').value;
+      renderAgendamentosTable({ cpf, sus, dateFrom: ffrom, dateTo: fto });
+    });
+    document.getElementById('btnClearFilters').addEventListener('click', ()=> { document.getElementById('filterCPF').value=''; 
+    document.getElementById('filterSUS').value=''; document.getElementById('filterDateFrom').value=''; document.getElementById('filterDateTo').value=''; 
+    renderAgendamentosTable(); });
+    document.getElementById('selectAllAg').addEventListener('click', (e) => {
+        document.querySelectorAll('.agCheckbox').forEach(chk => chk.checked = e.target.checked);
+    });
+    
+    document.getElementById('btnBulkConfirm').addEventListener('click', () => {
+        const selectedIds = Array.from(document.querySelectorAll('.agCheckbox:checked')).map(chk => chk.value);
+        if (selectedIds.length === 0) return alert('Selecione ao menos um agendamento para confirmar.');
+        if (!confirm(`Deseja confirmar ${selectedIds.length} agendamento(s)?`)) return;
+        confirmAppointments(selectedIds);
+    });
+
+    document.getElementById('btnBulkCancel').addEventListener('click', () => {
+        const selectedIds = Array.from(document.querySelectorAll('.agCheckbox:checked')).map(chk => chk.value);
+        if(selectedIds.length === 0) return alert('Selecione ao menos um agendamento para cancelar.');
+        openCancelModal(selectedIds);
+    });
+
+    document.getElementById('btnAplicarHist').addEventListener('click', renderHistoricoList);
+    document.getElementById('btnLimparHist').addEventListener('click', ()=> { document.getElementById('histTipo').value=''; 
+    document.getElementById('histDataInicio').value=''; document.getElementById('histDataFim').value=''; renderHistoricoList(); });
+    async function boot(){
+      await loadServerStorage();
+      initDefaultsIfEmpty();
+      renderClinicContact(); populateBairros(); applyMasks(); showPage('dashboard');
+
+      // Inicializar sincronização offline/online
+      window.syncManager = new SyncManager();
+
+      // Configurar indicadores de sincronização na UI
+      updateSyncUI();
+      window.syncManager.syncManager.addEventListener('online', () => updateSyncUI());
+      window.syncManager.syncManager.addEventListener('offline', () => updateSyncUI());
+
+      // Botão de sincronização manual
+      document.getElementById('sync-button').addEventListener('click', () => {
+        if (window.syncManager) {
+          window.syncManager.forceSync();
+        }
+      });
+    }
+
+    // Atualizar label do conselho conforme especialidade
+    document.getElementById('espEspecialidade').addEventListener('change', (e) => {
+      const label = document.getElementById('conselhoLabel');
+      const especialidade = e.target.value;
+      const conselhos = {
+        'Médico': 'CRM (Conselho Regional de Medicina)',
+        'Dentista': 'CRO (Conselho Regional de Odontologia)',
+        'Psicólogo': 'CRP (Conselho Regional de Psicologia)',
+        'Nutricionista': 'CRN (Conselho Regional de Nutrição)',
+        'Fonoaudiólogo': 'Crefono (Conselho Regional de Fonoaudiologia)',
+        'Médico Veterinário': 'CRMV (Conselho Regional de Medicina Veterinária)',
+        'Fisioterapeuta': 'Crefito (Conselho Regional de Fisioterapia)',
+        'Terapeuta Ocupacional': 'Crefito (Conselho Regional de Terapia Ocupacional)',
+        'Outro': 'Conselho Regional'
+      };
+      label.textContent = conselhos[especialidade] || 'Conselho Regional';
+    });
+
+  window.addEventListener('DOMContentLoaded', () => { boot().catch(err => { console.error('Erro no boot:', err); boot(); }); });
+    // Função para atualizar a UI de sincronização
+    function updateSyncUI() {
+      const dot = document.getElementById('sync-dot');
+      const text = document.getElementById('sync-text');
+
+      if (window.syncManager && window.syncManager.isOnline) {
+        dot.classList.add('online');
+        text.textContent = 'Online';
+      } else {
+        dot.classList.remove('online');
+        text.textContent = 'Offline';
+      }
+    }
+
+    window._app = { read, write, LS, genId, generateSlots, findEarliestSlotNextWeek, getAvailabilityForSpecialistOnDate };
+
+  </script>
+</body>
+</html>
