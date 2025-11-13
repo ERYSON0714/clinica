@@ -1,10 +1,14 @@
-# TODO: Deploy Clinica Project to GitHub and Netlify
+# TODO: Implantação Completa do Sistema Clínica (Usando Railway MySQL Gratuito)
 
-- [x] Verificar se o Git está inicializado no diretório clinica; se não, inicializá-lo.
-- [ ] Verificar se o GitHub CLI (gh) está instalado; se não, instalá-lo para Windows.
-- [ ] Autenticar com o GitHub usando gh se necessário.
-- [ ] Adicionar o repositório GitHub existente como remote origin (obter URL do repositório).
-- [ ] Adicionar todos os arquivos do projeto, fazer commit e enviar para o repositório GitHub 'clinica'.
-- [ ] Garantir que o login do Netlify esteja concluído.
-- [ ] Implantar o projeto no Netlify usando o CLI (focando nos diretórios frontend).
-- [ ] Testar a implantação para garantir que funcione corretamente.
+- [ ] Criar conta no Railway (se necessário)
+- [ ] Criar banco MySQL gratuito no Railway
+- [ ] Atualizar backend/db/index.js para conectar ao Railway MySQL (usar DATABASE_URL)
+- [ ] Criar repositório Git e fazer push do código
+- [ ] Implantar backend no Railway (conectar repositório, configurar variáveis de ambiente)
+- [ ] Criar conta no Vercel (se necessário)
+- [ ] Migrar frontend (clinica/) para Vercel
+- [ ] Atualizar URLs no frontend para apontar para backend no Railway
+- [ ] Configurar sincronização offline/online
+- [ ] Testar funcionalidade offline e sync
+- [ ] Preparar migração para Oracle Cloud MySQL
+- [ ] Atualizar documentação e README
