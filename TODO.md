@@ -1,12 +1,12 @@
 # TODO: Implantação Completa do Sistema Clínica (Usando Railway MySQL Gratuito)
 
-- [ ] Criar conta no Railway (se necessário)
+- [x] Criar conta no Railway (se necessário)
 - [ ] Criar banco MySQL gratuito no Railway
-- [ ] Atualizar backend/db/index.js para conectar ao Railway MySQL (usar DATABASE_URL)
-- [ ] Criar repositório Git e fazer push do código
+- [x] Atualizar backend/db/index.js para conectar ao Railway MySQL (usar DATABASE_URL)
+- [x] Criar repositório Git e fazer push do código
 - [ ] Implantar backend no Railway (conectar repositório, configurar variáveis de ambiente)
-- [ ] Criar conta no Vercel (se necessário)
-- [ ] Migrar frontend (clinica/) para Vercel
+- [x] Criar conta no Vercel (se necessário)
+- [x] Migrar frontend (clinica/) para Vercel
 - [ ] Atualizar URLs no frontend para apontar para backend no Railway
 - [ ] Configurar sincronização offline/online
 - [ ] Testar funcionalidade offline e sync
