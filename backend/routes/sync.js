@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../db');
+const storageBackend = require('../lib/storage_backend');
 const router = express.Router();
 
 // Helper function to get table name from entity
@@ -134,6 +135,19 @@ router.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'Data object required' });
     }
 
+    // If DB is not available, store upload in fallback storage (client_storage) per-entity
+    if (!(await storageBackend.dbAvailable())) {
+      try {
+        for (const [entity, items] of Object.entries(data)) {
+          // store under key sync_upload:<entity>
+          await storageBackend.setKey(`sync_upload:${entity}`, items);
+        }
+        return res.json({ success: true, fallback: true });
+      } catch (e) {
+        return res.status(500).json({ error: 'Fallback storage failed', details: e.message });
+      }
+    }
+
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
@@ -188,6 +202,24 @@ router.post('/upload', async (req, res) => {
 // GET /sync/download - download de dados da nuvem para local
 router.get('/download', async (req, res) => {
   try {
+    // If DB not available, return data from fallback storage keys
+    if (!(await storageBackend.dbAvailable())) {
+      try {
+        const cloudData = {};
+        // return all sync_upload:* keys
+        const all = await storageBackend.listAll();
+        for (const item of all) {
+          if (item.key && item.key.startsWith('sync_upload:')) {
+            const entity = item.key.replace('sync_upload:', '');
+            cloudData[entity] = item.value;
+          }
+        }
+        return res.json({ success: true, cloudData, lastSync: new Date().toISOString(), fallback: true });
+      } catch (e) {
+        return res.status(500).json({ error: 'Fallback read failed', details: e.message });
+      }
+    }
+
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
@@ -280,6 +312,29 @@ router.get('/download', async (req, res) => {
 router.post('/sync', async (req, res) => {
   try {
     const { localData, lastSync } = req.body;
+
+    // If DB not available, use fallback: store localData under sync_upload:<entity> and return those values
+    if (!(await storageBackend.dbAvailable())) {
+      try {
+        if (localData && Object.keys(localData).length > 0) {
+          for (const [entity, items] of Object.entries(localData)) {
+            await storageBackend.setKey(`sync_upload:${entity}`, items);
+          }
+        }
+        // return whatever is stored
+        const cloudData = {};
+        const all = await storageBackend.listAll();
+        for (const item of all) {
+          if (item.key && item.key.startsWith('sync_upload:')) {
+            const entity = item.key.replace('sync_upload:', '');
+            cloudData[entity] = item.value;
+          }
+        }
+        return res.json({ success: true, cloudData, lastSync: new Date().toISOString(), fallback: true });
+      } catch (e) {
+        return res.status(500).json({ error: 'Fallback sync failed', details: e.message });
+      }
+    }
 
     const connection = await pool.getConnection();
     await connection.beginTransaction();

@@ -610,23 +610,27 @@ class OfflineDB {
         if (Array.isArray(data) && data.length > 0) {
           localData[store] = data.map(item => ({
             ...item,
-            lastModified: item.lastModified || Date.now()
+            lastModified: item.last_modified || Date.now()
           }));
         } else if (data && typeof data === 'object') {
           localData[store] = {
             ...data,
-            lastModified: data.lastModified || Date.now()
+            lastModified: data.last_modified || Date.now()
           };
         }
       }
 
-      // Enviar para nuvem e receber dados atualizados
+      // Enviar dados locais e receber dados da nuvem em uma única requisição
       const lastSync = await this.loadLastSync();
-      const response = await fetch('/sync/download', {
-        method: 'GET',
+      const response = await fetch('/sync/sync', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify({
+          localData,
+          lastSync: lastSync ? new Date(lastSync).toISOString() : null
+        })
       });
 
       if (!response.ok) {
@@ -634,16 +638,24 @@ class OfflineDB {
       }
 
       const result = await response.json();
+      if (!result.success) {
+        throw new Error('Resposta de sincronização inválida');
+      }
 
-      // Atualizar dados locais com dados da nuvem
+      // Aplicar dados da nuvem recebidos
       if (result.cloudData) {
         for (const [store, items] of Object.entries(result.cloudData)) {
           if (Array.isArray(items)) {
-            // Para arrays, sobrescrever completamente
-            await this.saveAll(store, items);
+            // Mesclar arrays resolvendo conflitos baseado no timestamp
+            const localItems = await this.getAll(store);
+            const merged = this.mergeArrays(localItems, items);
+            await this.saveAll(store, merged);
           } else {
-            // Para objetos simples
-            await this.save(store, items);
+            // Para objetos simples, usar versão mais recente
+            const localItem = await this.get(store, items.id);
+            if (!localItem || !localItem.last_modified || items.lastModified > localItem.last_modified) {
+              await this.save(store, items);
+            }
           }
         }
       }
@@ -653,11 +665,37 @@ class OfflineDB {
         await this.saveLastSync(result.lastSync);
       }
 
+      console.log('Sincronização bidirecional concluída');
       return result;
     } catch (error) {
       console.error('Erro na sincronização:', error);
       throw error;
     }
+  }
+
+  mergeArrays(localArray, cloudArray) {
+    const merged = new Map();
+
+    // Adicionar itens locais
+    localArray.forEach(item => {
+      merged.set(item.id, { ...item, source: 'local' });
+    });
+
+    // Mesclar com itens da nuvem
+    cloudArray.forEach(cloudItem => {
+      const existing = merged.get(cloudItem.id);
+      if (!existing) {
+        merged.set(cloudItem.id, { ...cloudItem, source: 'cloud' });
+      } else {
+        // Resolver conflito baseado no timestamp
+        if (cloudItem.lastModified > existing.last_modified) {
+          merged.set(cloudItem.id, { ...cloudItem, source: 'cloud' });
+        }
+        // Se local for mais recente, manter local
+      }
+    });
+
+    return Array.from(merged.values()).map(({ source, ...item }) => item);
   }
 }
 

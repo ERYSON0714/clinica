@@ -10,12 +10,12 @@
 ## Tarefas
 - [x] Backend já usa tabelas específicas corretas
 - [x] Rotas /sync funcionais implementadas
-- [ ] Corrigir OfflineDB para usar IndexedDB para lastSync
-- [ ] Atualizar syncWithCloud() para usar rotas /sync corretas
-- [ ] Remover dependências de localStorage
-- [ ] Corrigir mapeamento de tabelas no syncItem()
-- [ ] Remover métodos obsoletos para 'consultas'
-- [ ] Implementar sincronização bidirecional funcional
+- [x] Corrigir OfflineDB para usar IndexedDB para lastSync
+- [x] Atualizar syncWithCloud() para usar rotas /sync corretas
+- [x] Remover dependências de localStorage
+- [x] Corrigir mapeamento de tabelas no syncItem()
+- [x] Remover métodos obsoletos para 'consultas'
+- [x] Implementar sincronização bidirecional funcional
 - [ ] Corrigir botão de sincronização no frontend
 - [ ] Testar funcionamento offline e online
 - [ ] Preparar para deploy (HTTPS recomendado)
