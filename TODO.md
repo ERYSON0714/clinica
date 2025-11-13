@@ -1,14 +1,21 @@
-# TODO: Implantação Completa do Sistema Clínica (Usando Railway MySQL Gratuito)
+# TODO - Correção do Sistema de Banco de Dados Offline/Cloud
 
-- [ ] Criar conta no Railway (se necessário)
-- [ ] Criar banco MySQL gratuito no Railway
-- [ ] Atualizar backend/db/index.js para conectar ao Railway MySQL (usar DATABASE_URL)
-- [ ] Criar repositório Git e fazer push do código
-- [ ] Implantar backend no Railway (conectar repositório, configurar variáveis de ambiente)
-- [ ] Criar conta no Vercel (se necessário)
-- [ ] Migrar frontend (clinica/) para Vercel
-- [ ] Atualizar URLs no frontend para apontar para backend no Railway
-- [ ] Configurar sincronização offline/online
-- [ ] Testar funcionalidade offline e sync
-- [ ] Preparar migração para Oracle Cloud MySQL
-- [ ] Atualizar documentação e README
+## Problemas Identificados
+- Mistura de localStorage e IndexedDB causando inconsistência entre navegadores
+- Backend usa tabela genérica client_storage em vez de tabelas específicas
+- Mapeamento incorreto entre OfflineDB e rotas de sincronização
+- Sincronização bidirecional não funciona corretamente
+- Botão de sincronização não funciona
+
+## Tarefas
+- [ ] Refatorar backend para usar tabelas específicas (pacientes, especialistas, agendamentos, etc.)
+- [ ] Atualizar rotas de storage para trabalhar com tabelas específicas
+- [ ] Corrigir OfflineDB para sincronizar corretamente com as novas rotas
+- [ ] Remover dependências de localStorage, usar apenas IndexedDB
+- [ ] Implementar sincronização bidirecional funcional
+- [ ] Corrigir botão de sincronização no frontend
+- [ ] Testar funcionamento offline e online
+- [ ] Preparar para deploy (HTTPS recomendado)
+
+## Status
+- Em andamento

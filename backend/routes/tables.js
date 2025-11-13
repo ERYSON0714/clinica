@@ -4,7 +4,8 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query('SHOW TABLES');
+    // MySQL equivalent of SHOW TABLES
+    const [rows] = await pool.query("SHOW TABLES");
     res.json(rows);
   } catch (err) {
     console.error('tables route error:', err && (err.stack || err.message || err));

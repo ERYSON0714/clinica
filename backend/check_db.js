@@ -2,7 +2,7 @@ const pool = require('./db');
 
 async function checkTable() {
   try {
-    const [rows] = await pool.query('DESCRIBE client_storage');
+    const [rows] = await pool.query('PRAGMA table_info(client_storage)');
     console.log('Estrutura da tabela client_storage:');
     console.log(rows);
   } catch (err) {
