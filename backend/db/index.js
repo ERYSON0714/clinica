@@ -113,6 +113,16 @@ const initDb = async () => {
       )
     `);
 
+    // Generic key/value storage for frontend (localStorage bridge)
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS client_storage (
+        ` + "`key`" + ` VARCHAR(255) PRIMARY KEY,
+        value TEXT,
+        sync_status ENUM('pending','synced') DEFAULT 'pending',
+        last_modified BIGINT DEFAULT (UNIX_TIMESTAMP() * 1000)
+      )
+    `);
+
     // Create indexes for better performance
     await connection.execute(`CREATE INDEX IF NOT EXISTS idx_pacientes_cpf ON pacientes(cpf)`);
     await connection.execute(`CREATE INDEX IF NOT EXISTS idx_pacientes_sus ON pacientes(sus)`);
@@ -126,6 +136,7 @@ const initDb = async () => {
     await connection.execute(`CREATE INDEX IF NOT EXISTS idx_sync_status_ag ON agendamentos(sync_status)`);
     await connection.execute(`CREATE INDEX IF NOT EXISTS idx_sync_status_hist ON historico(sync_status)`);
     await connection.execute(`CREATE INDEX IF NOT EXISTS idx_sync_status_com ON comunicados(sync_status)`);
+    await connection.execute(`CREATE INDEX IF NOT EXISTS idx_client_storage_sync ON client_storage(sync_status)`);
 
     connection.release();
     console.log('Database tables initialized.');

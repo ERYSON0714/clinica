@@ -19,3 +19,24 @@
 
 ## Status
 - Em andamento
+
+## Plano de Correção
+
+### 1. Análise dos Arquivos
+- **backend/db/index.js**: Já usa tabelas específicas corretas
+- **backend/routes/storage.js**: Funciona com tabelas específicas
+- **backend/routes/sync.js**: Rotas de sincronização funcionais
+- **offline-db.js**: Classe IndexedDB com problemas de mapeamento
+
+### 2. Problemas Identificados
+- OfflineDB usa tabelas diferentes das do backend (consultas vs agendamentos)
+- syncWithCloud() usa localStorage.getItem('lastSync') que não existe
+- Mapeamento de tabelas incorreto no syncItem()
+- Falta integração com as rotas /sync existentes
+
+### 3. Correções Necessárias
+- Alinhar nomes de tabelas entre OfflineDB e backend
+- Remover dependências de localStorage
+- Usar rotas /sync existentes em vez de /storage
+- Implementar lastSync em IndexedDB
+- Corrigir syncWithCloud() para usar as rotas corretas

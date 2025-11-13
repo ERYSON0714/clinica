@@ -15,6 +15,16 @@ const getTableName = (entity) => {
   return tableMap[entity] || entity;
 };
 
+// Helper to check if a table exists in current database
+const tableExists = async (table) => {
+  try {
+    const [rows] = await pool.query(`SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`, [table]);
+    return rows && rows[0] && rows[0].c > 0;
+  } catch (e) {
+    return false;
+  }
+};
+
 // Helper function to convert database row to frontend format
 const convertRowToFrontend = (row, table) => {
   const converted = { ...row };
@@ -105,17 +115,23 @@ const convertToDatabase = (data, table) => {
   return converted;
 };
 
+const storageBackend = require('../lib/storage_backend');
+
 // GET /storage/:entity - retorna todos os registros da entidade
 router.get('/:entity', async (req, res) => {
   try {
     const entity = req.params.entity;
     const table = getTableName(entity);
+    const exists = await tableExists(table);
+    if (!exists) {
+      // treat as key in client_storage (db or filesystem fallback)
+      const item = await storageBackend.getKey(entity);
+      if (!item) return res.json({ key: entity, value: null });
+      return res.json(item);
+    }
 
     const [rows] = await pool.query(`SELECT * FROM ${table} ORDER BY last_modified DESC`);
-
-    // Convert rows to frontend format
     const convertedRows = rows.map(row => convertRowToFrontend(row, table));
-
     res.json(convertedRows);
   } catch (err) {
     console.error('storage get route error:', err);
@@ -134,15 +150,19 @@ router.post('/:entity', async (req, res) => {
       return res.status(400).json({ error: 'Data object required' });
     }
 
-    const dbData = convertToDatabase(data, table);
+    const exists = await tableExists(table);
+    if (!exists) {
+      // upsert into client_storage using key = entity (db or filesystem fallback)
+      const item = await storageBackend.setKey(entity, data);
+      return res.json({ success: true, key: item.key, last_modified: item.last_modified });
+    }
 
-    // Build INSERT query dynamically
+    const dbData = convertToDatabase(data, table);
     const columns = Object.keys(dbData);
     const values = Object.values(dbData);
     const placeholders = columns.map(() => '?').join(', ');
 
-    const query = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders})
-                   ON DUPLICATE KEY UPDATE ${columns.map(col => `${col} = VALUES(${col})`).join(', ')}`;
+    const query = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders}) ON DUPLICATE KEY UPDATE ${columns.map(col => `${col} = VALUES(${col})`).join(', ')}`;
 
     await pool.query(query, values);
     res.json({ success: true, id: data.id });
@@ -164,10 +184,18 @@ router.put('/:entity/:id', async (req, res) => {
       return res.status(400).json({ error: 'Data object required' });
     }
 
+    const exists = await tableExists(table);
+    if (!exists) {
+      // update client_storage entry (db or filesystem fallback)
+      const current = await storageBackend.getKey(entity);
+      if (!current) return res.status(404).json({ error: 'Record not found' });
+      await storageBackend.setKey(entity, data);
+      return res.json({ success: true });
+    }
+
     const dbData = convertToDatabase(data, table);
     dbData.id = id; // Ensure ID is set
 
-    // Build UPDATE query dynamically
     const columns = Object.keys(dbData).filter(col => col !== 'id');
     const values = columns.map(col => dbData[col]);
     values.push(id); // Add ID for WHERE clause
@@ -194,6 +222,13 @@ router.delete('/:entity/:id', async (req, res) => {
     const entity = req.params.entity;
     const id = req.params.id;
     const table = getTableName(entity);
+    const exists = await tableExists(table);
+    if (!exists) {
+      // delete a client_storage key (db or filesystem fallback)
+      const ok = await storageBackend.deleteKey(entity);
+      if (!ok) return res.status(404).json({ error: 'Record not found' });
+      return res.json({ success: true });
+    }
 
     const [result] = await pool.query(`DELETE FROM ${table} WHERE id = ?`, [id]);
 
@@ -247,6 +282,17 @@ router.get('/:entity/search', async (req, res) => {
     });
 
     query += ' ORDER BY last_modified DESC';
+    const exists = await tableExists(table);
+    if (!exists) {
+      // for client_storage, use adapter to search or return all
+      if (q) {
+        const all = await storageBackend.listAll();
+        const filtered = all.filter(i => i.key && i.key.includes(q));
+        return res.json(filtered);
+      }
+      const all = await storageBackend.listAll();
+      return res.json(all);
+    }
 
     const [rows] = await pool.query(query, params);
 

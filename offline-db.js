@@ -2,8 +2,9 @@
 class OfflineDB {
   constructor() {
     this.dbName = 'clinica_offline';
-    this.version = 1;
+    this.version = 3; // Incrementado para forçar upgrade e corrigir tabelas
     this.db = null;
+    this.lastSync = null;
     this.syncQueue = [];
     this.isOnline = navigator.onLine;
     this.init();
@@ -18,61 +19,78 @@ class OfflineDB {
       request.onsuccess = () => {
         this.db = request.result;
         console.log('Offline DB initialized');
+        this.loadLastSync();
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
+        const oldVersion = event.oldVersion;
 
-        // Tabela de pacientes
+        // Tabela de pacientes (alinhada com backend)
         if (!db.objectStoreNames.contains('pacientes')) {
           const pacientesStore = db.createObjectStore('pacientes', { keyPath: 'id' });
           pacientesStore.createIndex('nome', 'nome', { unique: false });
           pacientesStore.createIndex('cpf', 'cpf', { unique: true });
+          pacientesStore.createIndex('sus', 'sus', { unique: false });
+          pacientesStore.createIndex('setor', 'setor', { unique: false });
           pacientesStore.createIndex('sync_status', 'sync_status', { unique: false });
+          pacientesStore.createIndex('last_modified', 'last_modified', { unique: false });
         }
 
-        // Tabela de especialistas
+        // Tabela de especialistas (alinhada com backend)
         if (!db.objectStoreNames.contains('especialistas')) {
           const especialistasStore = db.createObjectStore('especialistas', { keyPath: 'id' });
           especialistasStore.createIndex('nome', 'nome', { unique: false });
           especialistasStore.createIndex('especialidade', 'especialidade', { unique: false });
-          especialistasStore.createIndex('crm', 'crm', { unique: true });
+          especialistasStore.createIndex('conselho', 'conselho', { unique: false });
+          especialistasStore.createIndex('turno', 'turno', { unique: false });
+          especialistasStore.createIndex('ativo', 'ativo', { unique: false });
           especialistasStore.createIndex('sync_status', 'sync_status', { unique: false });
+          especialistasStore.createIndex('last_modified', 'last_modified', { unique: false });
         }
 
-        // Tabela de consultas
-        if (!db.objectStoreNames.contains('consultas')) {
-          const consultasStore = db.createObjectStore('consultas', { keyPath: 'id' });
-          consultasStore.createIndex('paciente_id', 'paciente_id', { unique: false });
-          consultasStore.createIndex('especialista_id', 'especialista_id', { unique: false });
-          consultasStore.createIndex('data', 'data', { unique: false });
-          consultasStore.createIndex('status', 'status', { unique: false });
-          consultasStore.createIndex('sync_status', 'sync_status', { unique: false });
-        }
-
-        // Tabela de agendamentos
+        // Tabela de agendamentos (alinhada com backend - substitui consultas)
         if (!db.objectStoreNames.contains('agendamentos')) {
           const agendamentosStore = db.createObjectStore('agendamentos', { keyPath: 'id' });
           agendamentosStore.createIndex('paciente_id', 'paciente_id', { unique: false });
+          agendamentosStore.createIndex('paciente_nome', 'paciente_nome', { unique: false });
+          agendamentosStore.createIndex('paciente_cpf', 'paciente_cpf', { unique: false });
           agendamentosStore.createIndex('especialista_id', 'especialista_id', { unique: false });
-          agendamentosStore.createIndex('data_hora', 'data_hora', { unique: false });
+          agendamentosStore.createIndex('especialista_nome', 'especialista_nome', { unique: false });
+          agendamentosStore.createIndex('especialidade', 'especialidade', { unique: false });
+          agendamentosStore.createIndex('data', 'data', { unique: false });
+          agendamentosStore.createIndex('hora', 'hora', { unique: false });
           agendamentosStore.createIndex('status', 'status', { unique: false });
           agendamentosStore.createIndex('sync_status', 'sync_status', { unique: false });
+          agendamentosStore.createIndex('last_modified', 'last_modified', { unique: false });
         }
 
-        // Tabela de usuários
-        if (!db.objectStoreNames.contains('usuarios')) {
-          const usuariosStore = db.createObjectStore('usuarios', { keyPath: 'id' });
-          usuariosStore.createIndex('email', 'email', { unique: true });
-          usuariosStore.createIndex('tipo', 'tipo', { unique: false });
-          usuariosStore.createIndex('sync_status', 'sync_status', { unique: false });
-        }
-
-        // Tabela de configurações da clínica
+        // Tabela de configurações da clínica (alinhada com backend)
         if (!db.objectStoreNames.contains('clinica_config')) {
           const configStore = db.createObjectStore('clinica_config', { keyPath: 'id' });
           configStore.createIndex('sync_status', 'sync_status', { unique: false });
+          configStore.createIndex('last_modified', 'last_modified', { unique: false });
+        }
+
+        // Tabela de histórico (alinhada com backend)
+        if (!db.objectStoreNames.contains('historico')) {
+          const historicoStore = db.createObjectStore('historico', { keyPath: 'id' });
+          historicoStore.createIndex('type', 'type', { unique: false });
+          historicoStore.createIndex('actor', 'actor', { unique: false });
+          historicoStore.createIndex('timestamp', 'timestamp', { unique: false });
+          historicoStore.createIndex('sync_status', 'sync_status', { unique: false });
+          historicoStore.createIndex('last_modified', 'last_modified', { unique: false });
+        }
+
+        // Tabela de comunicados (alinhada com backend)
+        if (!db.objectStoreNames.contains('comunicados')) {
+          const comunicadosStore = db.createObjectStore('comunicados', { keyPath: 'id' });
+          comunicadosStore.createIndex('titulo', 'titulo', { unique: false });
+          comunicadosStore.createIndex('setor', 'setor', { unique: false });
+          comunicadosStore.createIndex('created_at', 'created_at', { unique: false });
+          comunicadosStore.createIndex('sync_status', 'sync_status', { unique: false });
+          comunicadosStore.createIndex('last_modified', 'last_modified', { unique: false });
         }
 
         // Tabela de fila de sincronização
@@ -81,6 +99,12 @@ class OfflineDB {
           syncStore.createIndex('table', 'table', { unique: false });
           syncStore.createIndex('operation', 'operation', { unique: false });
           syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
+        // Tabela de metadados de sincronização
+        if (!db.objectStoreNames.contains('sync_metadata')) {
+          const metadataStore = db.createObjectStore('sync_metadata', { keyPath: 'key' });
+          metadataStore.createIndex('value', 'value', { unique: false });
         }
       };
     });
