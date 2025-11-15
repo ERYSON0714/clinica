@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,7 +7,7 @@
   <title>Gestão - CLÍNICA ETEMFL</title>
 
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
+  <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=dBwbdz9g5qFohKah-Kab8tCayejQBcOKzCiLtWHE3ejI0QkHAmsQ4YjMKkvkeOLAoGx-AEs24lvK9XsJnddbGZm6ikGbAuBQJ9lHS-5iW5I" charset="UTF-8"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
 
   <style>
     :root{
@@ -26,7 +27,7 @@
     .app { display:flex; min-height:100vh; gap:18px; }
     .sidebar { width:300px; background:var(--dark); color:#fff; padding:20px; display:flex; flex-direction:column; }
     .logo { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-    .logo .icon { width:44px; height:44; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center; color:var(--dark); font-weight:700 }
+    .logo .icon { width:44px; height:44px; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center; color:var(--dark); font-weight:700 }
     .nav { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
     .nav a { color:#fff; text-decoration:none; padding:10px; border-radius:8px; display:flex; gap:8px; align-items:center; }
     .nav a:hover, .nav a.active { background: rgba(255,255,255,0.06); }
@@ -68,6 +69,35 @@
     .sync-button:hover { background: rgba(255,255,255,0.1); }
     @media(max-width:900px){ .sidebar{ display:none } .grid{ grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); } }
 
+    /* mobile menu toggle — match usuario */
+    .mobile-menu-toggle {
+      display: none;
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      z-index: 1000;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 1.2rem;
+    }
+    @media(max-width:900px){
+      .sidebar {
+        position: fixed;
+        left: -100%;
+        top: 0;
+        height: 100vh;
+        width: 280px;
+        z-index: 999;
+        transition: left 0.3s ease;
+        overflow-y: auto;
+      }
+      .sidebar.mobile-open { left: 0; }
+      .mobile-menu-toggle { display:block; }
+    }
+
     pre.history {
       background: #f9f9f9;       
       border: 1px solid #ddd;    
@@ -94,6 +124,9 @@
 
 </head>
 <body>
+  <button class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+  </button>
   <div class="app">
     <aside class="sidebar" role="navigation" aria-label="Menu principal">
       <div class="logo">
@@ -417,6 +450,9 @@
 
   <script src="sync.js"></script>
   <script>
+    // Se true, força o indicador do GESTOR a usar o estado do navegador (navigator.onLine)
+    const FORCE_USE_NAV_ONLINE = true;
+
     const LS = {
       PAC: 'db_pacientes_v3',
       ESP: 'db_especialistas_v3',
@@ -1326,19 +1362,41 @@
       initDefaultsIfEmpty();
       renderClinicContact(); populateBairros(); applyMasks(); showPage('dashboard');
 
-      // Inicializar sincronização offline/online
-      window.syncManager = new SyncManager();
+      // Inicializar sincronização offline/online (cria SyncManager apenas se disponível)
+      try {
+        if (typeof SyncManager !== 'undefined') {
+          window.syncManager = new SyncManager();
+        } else {
+          window.syncManager = null;
+          console.warn('sync.js não encontrado: usando fallback navigator.onLine para o indicador.');
+        }
+      } catch(e){
+        window.syncManager = null;
+        console.warn('Falha ao instanciar SyncManager:', e && e.message);
+      }
 
-      // Configurar indicadores de sincronização na UI
+      // Atualizar indicador de sincronização (SyncManager primário, mas com fallback para navigator.onLine)
       updateSyncUI();
-      window.syncManager.syncManager.addEventListener('online', () => updateSyncUI());
-      window.syncManager.syncManager.addEventListener('offline', () => updateSyncUI());
+      // eventos emitidos pelo SyncManager (se existir)
+      try {
+        if(window.syncManager && window.syncManager.syncManager && window.syncManager.syncManager.addEventListener){
+          window.syncManager.syncManager.addEventListener('online', () => updateSyncUI());
+          window.syncManager.syncManager.addEventListener('offline', () => updateSyncUI());
+        }
+      } catch(e){}
+      // fallback para eventos de conectividade do navegador
+      window.addEventListener('online', updateSyncUI);
+      window.addEventListener('offline', updateSyncUI);
 
       // Botão de sincronização manual
-      document.getElementById('sync-button').addEventListener('click', () => {
-        if (window.syncManager) {
+      const syncBtn = document.getElementById('sync-button');
+      if(syncBtn) syncBtn.addEventListener('click', () => {
+        if (window.syncManager && typeof window.syncManager.forceSync === 'function') {
           window.syncManager.forceSync();
+        } else {
+          alert('Sincronização manual não disponível no momento.');
         }
+        updateSyncUI();
       });
     }
 
@@ -1365,8 +1423,13 @@
     function updateSyncUI() {
       const dot = document.getElementById('sync-dot');
       const text = document.getElementById('sync-text');
+      if(!dot || !text) return;
 
-      if (window.syncManager && window.syncManager.isOnline) {
+      // Considera online se o SyncManager disser que está online OU se o navegador estiver online (fallback)
+      const syncMgrOnline = (window.syncManager && typeof window.syncManager.isOnline !== 'undefined') ? !!window.syncManager.isOnline : false;
+      const online = (typeof FORCE_USE_NAV_ONLINE !== 'undefined' && FORCE_USE_NAV_ONLINE) ? navigator.onLine : (syncMgrOnline || navigator.onLine);
+
+      if (online) {
         dot.classList.add('online');
         text.textContent = 'Online';
       } else {
@@ -1376,6 +1439,19 @@
     }
 
     window._app = { read, write, LS, genId, generateSlots, findEarliestSlotNextWeek, getAvailabilityForSpecialistOnDate };
+    // mobile menu toggle behavior (match usuario)
+    const mmBtn = document.getElementById('mobileMenuToggle');
+    if(mmBtn) mmBtn.addEventListener('click', function() {
+      const sidebar = document.getElementsByClassName('sidebar')[0];
+      if(sidebar) sidebar.classList.toggle('mobile-open');
+    });
+    document.querySelectorAll('.nav a').forEach(link => {
+      link.addEventListener('click', function() {
+        if (window.innerWidth <= 900) {
+          const sb = document.getElementsByClassName('sidebar')[0]; if(sb) sb.classList.remove('mobile-open');
+        }
+      });
+    });
 
   </script>
 </body>
