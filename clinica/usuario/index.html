@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -13,7 +14,7 @@
   <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Cl%C3%ADnica%20ETEMFL%20-%20Usu%C3%A1rio%22%2C%22short_name%22%3A%22Cl%C3%ADnicaETEMFL%22%2C%22description%22%3A%22Sistema%20de%20agendamento%20de%20consultas%20para%20usu%C3%A1rios%20da%20Cl%C3%ADnica%20ETEMFL%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%2328a745%22%2C%22orientation%22%3A%22portrait-primary%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg%3D%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
 
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
+  <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=J-yfmA6G7m06JG-pTAyno8KNr2sKkOyjYaaz93M3c4FnOKV0enjd3s1_JwjZx696aITiqgS3VbdcgztJa0gyrMjK0GWgE9pe5XRGzuuozTY" charset="UTF-8"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
 
   <style>
     :root{
@@ -38,12 +39,12 @@
     .logo .brand-title{ font-weight:800 }
     .logo .brand-sub { font-size:0.85rem; opacity:.9 }
     .sync-status { display:flex; align-items:center; gap:8px; margin-left:auto; }
-    .sync-dot { width:12px; height:12px; border-radius:50%; display:inline-block; }
+    .sync-indicator { display:flex; align-items:center; gap:6px; font-size:0.85rem; }
+    .sync-dot { width:8px; height:8px; border-radius:50%; background:#dc3545; display:inline-block; }
     .sync-dot.online { background:#28a745; }
-    .sync-dot.offline { background:#dc3545; }
-    .sync-text { font-size:0.8rem; font-weight:600; }
-    .sync-btn { background:#007bff; color:#fff; border:none; border-radius:6px; padding:6px 10px; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; gap:4px; }
-    .sync-btn:hover { background:#0056b3; }
+    .sync-text { font-size:0.85rem; font-weight:600; color:#fff; }
+    .sync-button { background: none; border: none; color: #fff; cursor: pointer; padding: 4px; border-radius: 4px; }
+    .sync-button:hover { background: rgba(255,255,255,0.08); }
     .nav { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
     .nav a { color:#fff; text-decoration:none; padding:10px; border-radius:8px; display:flex; gap:8px; align-items:center; }
     .nav a:hover, .nav a.active { background: rgba(255,255,255,0.06); }
@@ -361,11 +362,13 @@
           <div id="brandTitle" class="brand-title">Plataforma</div>
           <div id="brandSub" class="brand-sub">Usuário</div>
         </div>
-        <div class="sync-status">
-          <span class="sync-dot offline" id="syncDot"></span>
-          <span class="sync-text" id="syncText">Offline</span>
-          <button class="sync-btn" id="syncBtn">
-            <i class="fas fa-sync-alt"></i> Sincronizar
+        <div id="sync-status" class="sync-status">
+          <div class="sync-indicator" id="sync-indicator">
+            <span class="sync-dot" id="sync-dot"></span>
+            <span class="sync-text" id="sync-text">Offline</span>
+          </div>
+          <button id="sync-button" class="sync-button" title="Sincronizar dados">
+            <i class="fas fa-sync-alt"></i>
           </button>
         </div>
       </div>
@@ -390,97 +393,210 @@
 
     <main class="main">
       <section id="dashboard" class="card">
-        <h1>PAINEL — Especialidades com Vagas</h1>
+        <h1>PAINEL — Vagas Disponíveis por Especialidade</h1>
         <div id="vagasGrid" class="grid"></div>
-        <div class="small" style="margin-top:8px">Selecione uma especialidade para ver os especialistas e horários disponíveis da semana subsequente.</div>
+        <div class="small" style="margin-top:8px">Clique em uma especialidade para visualizar vagas e horários da semana subsequente. O sistema oferece a primeira vaga disponível — o usuário só confirma.</div>
       </section>
 
-      <section id="comunicados" class="card" style="display:none">
-        <h1>Comunicados da Clínica</h1>
-        <div id="comList"></div>
-        <div class="small" style="margin-top:8px" id="comHint">Somente comunicados direcionados ao seu setor/bairro ou gerais da clínica serão exibidos.</div>
-      </section>
+      <section id="agendamentos" class="card" style="display:none">
+        <h1>Agendamentos</h1>
+        <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input id="filterCPF" placeholder="Filtrar por CPF (000.000.000-00)" style="width:200px;padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+          <input id="filterSUS" placeholder="Filtrar por Cartão SUS (000.0000.0000.0000)" style="width:240px;padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+          <input id="filterDateFrom" type="date" style="padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+          <input id="filterDateTo" type="date" style="padding:8px;border-radius:8px;border:1px solid var(--border)"/>
+          <button id="btnApplyFilters" class="btn">Aplicar</button>
+          <button id="btnClearFilters" class="btn-muted">Limpar</button>
+          <div style="margin-left:auto" class="small">Ordenado por data de criação</div>
+        </div>
 
-      <section id="agendar" class="card" style="display:none">
-        <h1>Agendar Consulta</h1>
-        <div class="form-group">
-          <label>Especialidade</label>
-          <select id="selEspecialidade"><option value="">-- Escolha --</option></select>
+        <div style="margin-bottom:12px; display:flex; gap:8px;">
+            <button id="btnBulkConfirm" class="btn">Confirmar Selecionados</button>
+            <button id="btnBulkCancel" class="btn-danger">Cancelar Selecionados</button>
         </div>
-        <div class="form-group">
-          <label>Especialista</label>
-          <select id="selEspecialista"><option value="">-- Escolha --</option></select>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-          <button id="btnMostrarVagas" class="btn">Mostrar vagas (semana subsequente)</button>
-          <div id="msgVagas" class="small" style="margin-left:8px;color:#555"></div>
-        </div>
-        <div id="vagasResultados"></div>
-      </section>
 
-      <section id="meus-agendamentos" class="card" style="display:none">
-        <h1>Meus Agendamentos</h1>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-          <div><label>Data inicial</label><input id="filterFrom" type="date" /></div>
-          <div><label>Data final</label><input id="filterTo" type="date" /></div>
-          <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
-            <button id="btnFilterMy" class="btn">Aplicar</button>
-            <button id="btnClearMy" class="btn-muted">Limpar</button>
-          </div>
-        </div>
-        <table>
+        <table aria-live="polite">
           <thead>
             <tr>
+              <th style="width:20px"><input type="checkbox" id="selectAllAg" /></th>
+              <th>Paciente</th>
+              <th>CPF / SUS</th>
               <th>Especialidade</th>
               <th>Especialista</th>
               <th>Data da Consulta</th>
-              <th>Hora</th>
+              <th>Criado em</th>
               <th>Status</th>
-              <th style="width:220px">Ações</th>
+              <th style="width:260px">Ações</th>
             </tr>
           </thead>
-          <tbody id="myAgendamentosTbody"></tbody>
+          <tbody id="agendamentosTbody"></tbody>
         </table>
       </section>
 
-      <section id="meu-perfil" class="card" style="display:none">
-        <h1>Meu Perfil</h1>
-        <div class="form-group"><label>Nome</label><input id="pfNome" disabled /></div>
-        <div style="display:flex;gap:8px;">
-          <div style="flex:1" class="form-group"><label>Data de Nascimento</label><input id="pfNascimento" type="date" disabled /></div>
-          <div style="flex:1" class="form-group"><label>CPF</label><input id="pfCpf" disabled /></div>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <div style="flex:1" class="form-group"><label>Cartão SUS</label><input id="pfSus" disabled /></div>
-          <div style="flex:1" class="form-group"><label>Bairro</label><input id="pfBairro" disabled /></div>
-        </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
-          <button id="btnSolicitarAlteracao" class="btn-muted">Solicitar alteração (clínica)</button>
-        </div>
-        <div class="small" style="margin-top:10px">Se precisar alterar seus dados, envie uma solicitação à clínica — Em 72 horas faça um novo cadastro — Se não liberado procure a clinica aqual você é atendido(a). </div>
+      <section id="incluir-especialista" class="card" style="display:none">
+        <h1>Incluir / Editar Especialista</h1>
+        <form id="formEspecialista">
+          <input type="hidden" id="espId" value="" />
+          <div class="form-group"><label>Nome do especialista</label><input id="espNome" type="text" placeholder="Ex: Dra. Maria Silva" required /></div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Especialidade</label>
+              <select id="espEspecialidade" required>
+                <option value="">-- Selecione --</option>
+                <option value="Médico">Médico</option>
+                <option value="Dentista">Dentista</option>
+                <option value="Psicólogo">Psicólogo</option>
+                <option value="Nutricionista">Nutricionista</option>
+                <option value="Fonoaudiólogo">Fonoaudiólogo</option>
+                <option value="Médico Veterinário">Médico Veterinário</option>
+                <option value="Fisioterapeuta">Fisioterapeuta</option>
+                <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div style="flex:1" class="form-group"><label id="conselhoLabel">Conselho Regional</label><input id="espConselho" type="text" placeholder="Ex: 12345" /></div>
+          </div>
+          <div class="form-group"><label>Turno</label>
+            <div style="display:flex;gap:12px;">
+              <label><input type="radio" name="espTurno" value="manhã" checked /> Manhã</label>
+              <label><input type="radio" name="espTurno" value="tarde" /> Tarde</label>
+              <label><input type="radio" name="espTurno" value="ambos" /> Ambos</label>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Vagas por dia — Manhã</label><input id="espVagasManha" type="number" value="20" min="0" /></div>
+            <div style="flex:1" class="form-group"><label>Vagas por dia — Tarde</label><input id="espVagasTarde" type="number" value="20" min="0" /></div>
+          </div>
+          <div class="form-group"><label>Dias da semana</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <label><input class="dayChk" type="checkbox" value="1" /> Seg</label>
+              <label><input class="dayChk" type="checkbox" value="2" /> Ter</label>
+              <label><input class="dayChk" type="checkbox" value="3" /> Qua</label>
+              <label><input class="dayChk" type="checkbox" value="4" /> Qui</label>
+              <label><input class="dayChk" type="checkbox" value="5" /> Sex</label>
+              <label><input class="dayChk" type="checkbox" value="6" /> Sáb</label>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" id="btnSaveEspecialista" class="btn">Salvar</button>
+            <button type="button" id="btnCancelEspecialista" class="btn-muted">Cancelar</button>
+          </div>
+        </form>
       </section>
 
-      <section id="historico" class="card" style="display:none">
-        <h1>Histórico</h1>
-        <div style="display:flex;gap:8px;align-items:end;margin-bottom:10px;">
-          <div><label>Data início</label><input id="histFrom" type="date" /></div>
-          <div><label>Data fim</label><input id="histTo" type="date" /></div>
+      <section id="especialistas" class="card" style="display:none">
+        <h1>Especialistas Cadastrados</h1>
+        <div id="especialistasGrid" class="grid"></div>
+      </section>
+
+      <section id="cadastro-paciente" class="card" style="display:none">
+        <h1>Cadastro de Paciente</h1>
+        <form id="formPaciente">
+          <div class="form-group"><label>Nome</label><input id="pacNome" type="text" required /></div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Data de Nascimento</label><input id="pacNascimento" type="date" /></div>
+            <div style="flex:1" class="form-group"><label>CPF</label><input id="pacCpf" type="text" maxlength="14" placeholder="000.000.000-00" /></div>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Carteira SUS</label><input id="pacSus" type="text" maxlength="19" placeholder="000.0000.0000.0000" /></div>
+            <div style="flex:1" class="form-group"><label>Bairro (vinculado a setor)</label><select id="pacBairro"></select></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" id="btnSavePaciente" class="btn">Cadastrar</button>
+            <button type="button" id="btnClearPaciente" class="btn-muted">Limpar</button>
+          </div>
+        </form>
+
+        <div style="margin-top:16px">
+          <h3>Pacientes cadastrados</h3>
+          <table id="pacientesTable">
+            <thead><tr><th>Nome</th><th>Data Nasc</th><th>CPF</th><th>SUS</th><th>Bairro (Setor)</th><th>Origem</th><th>Ações</th></tr></thead>
+            <tbody id="pacientesTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="comunicados" class="card" style="display:none">
+        <h1>Comunicados</h1>
+        <form id="formComunicado">
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1" class="form-group"><label>Título</label><input id="comTitulo" type="text" /></div>
+            <div style="width:220px" class="form-group"><label>Setor</label>
+              <select id="comSetor"><option value="">Todos</option><option value="A1">Setor A1</option><option value="B2">Setor B2</option><option value="C3">Setor C3</option><option value="D4">Setor D4</option><option value="E5">Setor E5</option></select>
+            </div>
+          </div>
+          <div class="form-group"><label>Mensagem</label><textarea id="comMensagem" rows="4"></textarea></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button id="btnSendCom" class="btn">Enviar Comunicado</button>
+            <button id="btnClearCom" class="btn-muted">Limpar</button>
+          </div>
+        </form>
+        <div id="comList" style="margin-top:12px;"></div>
+      </section>
+
+      <section id="atendimentos-dia" class="card" style="display:none">
+        <h1>Atendimentos do Dia</h1>
+        <div class="card">
+          <div><strong>Setor de Atendimento do Dia:</strong> <span id="setorAtendimentoHoje">Nenhum</span></div>
+          <div id="atendimentosHojeList" style="margin-top:8px">Nenhum atendimento agendado para hoje neste setor.</div>
+        </div>
+      </section>
+
+      <section id="historico-geral" class="card" style="display:none">
+        <h1>Histórico Geral</h1>
+
+        <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:10px;">
+          <div style="flex:1">
+            <label>Tipo de Ação</label>
+            <select id="histTipo">
+              <option value="">Todos</option>
+              <option value="especialista">Especialista</option>
+              <option value="paciente">Paciente</option>
+              <option value="agendamento">Agendamento</option>
+              <option value="confirmacao">Confirmação/Cancelamento</option>
+              <option value="comunicado">Comunicado</option>
+              <option value="config">Configuração</option>
+            </select>
+          </div>
+          <div><label>Data início</label><input id="histDataInicio" type="date" /></div>
+          <div><label>Data fim</label><input id="histDataFim" type="date" /></div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <button id="btnAplicarHistUser" class="btn">Aplicar</button>
-            <button id="btnLimparHistUser" class="btn-muted">Limpar</button>
+            <button id="btnAplicarHist" class="btn">Aplicar</button>
+            <button id="btnLimparHist" class="btn-muted">Limpar</button>
           </div>
         </div>
-        <div id="histUserList"></div>
+
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+          <button id="btnOpenRedefinir" class="btn-danger">Redefinir Sistema</button>
+        </div>
+
+        <div id="histList"></div>
       </section>
 
-      <section id="contato" class="card" style="display:none">
-        <h1>Contato da Clínica</h1>
-        <div class="contact-card">
-          <div class="clinic-name" id="clinicName2">— Sem dados cadastrados —</div>
-          <div class="clinic-line" id="clinicAddress2"></div>
-          <div class="clinic-line" id="clinicPhone2"></div>
-        </div>
+      <section id="config" class="card" style="display:none">
+        <h1>Configurações da Clínica</h1>
+        <form id="formConfig">
+          <div class="form-group"><label>Nome da Clínica</label><input id="cfgNome" type="text" /></div>
+          <div class="form-group"><label>Endereço</label><input id="cfgEndereco" type="text" /></div>
+          <div class="form-group"><label>Telefone</label><input id="cfgTelefone" type="text" /></div>
+
+          <div class="form-group">
+            <label>Senha Mestre (criar/alterar)</label>
+            <input id="cfgMaster" type="password" placeholder="Senha Mestre (mínimo 6 caracteres)" />
+            <div class="small">A Senha Mestre é usada para redefinir o sistema. Guarde-a com segurança.</div>
+          </div>
+
+          <div class="form-group">
+            <label>Setor da Clínica</label>
+            <select id="cfgSetor"><option value="">-- Selecione --</option><option value="A1">A1</option><option value="B2">B2</option><option value="C3">C3</option><option value="D4">D4</option><option value="E5">E5</option></select>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button id="btnSaveCfg" type="button" class="btn">Salvar</button>
+            <button id="btnOpenRedefinirFromConfig" type="button" class="btn-danger">Redefinir Sistema</button>
+          </div>
+        </form>
       </section>
+
     </main>
   </div>
 
@@ -942,23 +1058,27 @@
       document.getElementById('pfBairro').value = user.bairro || '';
     }
 
-    document.getElementById('tabLogin').addEventListener('click', ()=>{
-      document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabRegister').classList.remove('active');
-      document.getElementById('loginPane').style.display = 'block'; document.getElementById('registerPane').style.display = 'none';
+    const tabLoginEl = document.getElementById('tabLogin');
+    if(tabLoginEl) tabLoginEl.addEventListener('click', ()=>{
+      tabLoginEl.classList.add('active'); const tr = document.getElementById('tabRegister'); if(tr) tr.classList.remove('active');
+      const loginPane = document.getElementById('loginPane'); const registerPane = document.getElementById('registerPane');
+      if(loginPane) loginPane.style.display = 'block'; if(registerPane) registerPane.style.display = 'none';
     });
 
-    document.getElementById('tabRegister').addEventListener('click', ()=>{
-      document.getElementById('tabRegister').classList.add('active'); document.getElementById('tabLogin').classList.remove('active');
-      document.getElementById('registerPane').style.display = 'block'; document.getElementById('loginPane').style.display = 'none';
+    const tabRegisterEl = document.getElementById('tabRegister');
+    if(tabRegisterEl) tabRegisterEl.addEventListener('click', ()=>{
+      tabRegisterEl.classList.add('active'); const tl = document.getElementById('tabLogin'); if(tl) tl.classList.remove('active');
+      const registerPane = document.getElementById('registerPane'); const loginPane = document.getElementById('loginPane');
+      if(registerPane) registerPane.style.display = 'block'; if(loginPane) loginPane.style.display = 'none';
     });
 
-    document.getElementById('btnRegister').addEventListener('click', registerUser);
-    document.getElementById('btnLogin').addEventListener('click', loginUser);
-    document.getElementById('btnLogout').addEventListener('click', (e)=>{ e.preventDefault(); logout(); });
-    document.getElementById('regCpf').addEventListener('input', e => e.target.value = maskCpf(e.target.value));
-    document.getElementById('regSus').addEventListener('input', e => e.target.value = maskSus(e.target.value));
-    document.getElementById('loginCpf').addEventListener('input', e => e.target.value = maskCpf(e.target.value));
-    document.getElementById('loginSus').addEventListener('input', e => e.target.value = maskSus(e.target.value));
+    const btnRegisterEl = document.getElementById('btnRegister'); if(btnRegisterEl) btnRegisterEl.addEventListener('click', registerUser);
+    const btnLoginEl = document.getElementById('btnLogin'); if(btnLoginEl) btnLoginEl.addEventListener('click', loginUser);
+    const btnLogoutEl = document.getElementById('btnLogout'); if(btnLogoutEl) btnLogoutEl.addEventListener('click', (e)=>{ e.preventDefault(); logout(); });
+    const regCpfEl = document.getElementById('regCpf'); if(regCpfEl) regCpfEl.addEventListener('input', e => e.target.value = maskCpf(e.target.value));
+    const regSusEl = document.getElementById('regSus'); if(regSusEl) regSusEl.addEventListener('input', e => e.target.value = maskSus(e.target.value));
+    const loginCpfEl = document.getElementById('loginCpf'); if(loginCpfEl) loginCpfEl.addEventListener('input', e => e.target.value = maskCpf(e.target.value));
+    const loginSusEl = document.getElementById('loginSus'); if(loginSusEl) loginSusEl.addEventListener('input', e => e.target.value = maskSus(e.target.value));
 
     function formatCPFDisplay(cpf){
       if(!cpf) return '-';
@@ -972,15 +1092,18 @@
       return `${s.slice(0,3)}.${s.slice(3,7)}.${s.slice(7,11)}.${s.slice(11,15)}`;
     }
 
-    document.getElementById('selEspecialidade').addEventListener('change', ()=>{
+    const selEspecialidadeEl = document.getElementById('selEspecialidade');
+    if(selEspecialidadeEl) selEspecialidadeEl.addEventListener('change', ()=>{
       populateEspecialistasForSelected();
-      document.getElementById('vagasResultados').innerHTML = '';
-      document.getElementById('msgVagas').textContent = '';
+      const vr = document.getElementById('vagasResultados'); if(vr) vr.innerHTML = '';
+      const mv = document.getElementById('msgVagas'); if(mv) mv.textContent = '';
     });
 
-    document.getElementById('btnMostrarVagas').addEventListener('click', ()=>{
-      const espec = document.getElementById('selEspecialidade').value;
-      const espId = document.getElementById('selEspecialista').value;
+    const btnMostrarVagasEl = document.getElementById('btnMostrarVagas');
+    if(btnMostrarVagasEl) btnMostrarVagasEl.addEventListener('click', ()=>{
+      const especEl = document.getElementById('selEspecialidade'); const espSelEl = document.getElementById('selEspecialista');
+      const espec = especEl ? especEl.value : null;
+      const espId = espSelEl ? espSelEl.value : null;
       if(!espec){ alert('Escolha uma especialidade.'); return; }
       const avail = findAvailabilityForSpecialtyNextWeek(espec);
 
@@ -990,25 +1113,22 @@
         for(const d of wk){ if(d.slots && d.slots.length) { any = true; break; } }
         if(any) break;
       }
-      if(!any){
-        document.getElementById('vagasResultados').innerHTML = `<div class="small">Não há vagas na semana subsequente para esta especialidade. Tente novamente a partir da próxima segunda-feira.</div>`;
-        return;
-      }
-
-      const resultsDiv = document.getElementById('vagasResultados');
-      resultsDiv.innerHTML = '';
+      const vr = document.getElementById('vagasResultados');
+      if(!any){ if(vr) vr.innerHTML = `<div class="small">Não há vagas na semana subsequente para esta especialidade. Tente novamente a partir da próxima segunda-feira.</div>`; return; }
+      if(!vr) return;
+      vr.innerHTML = '';
 
       if(espId){
         const rec = avail[espId];
-        if(!rec){ resultsDiv.innerHTML = '<div class="small">Especialista não encontrado ou sem vagas.</div>'; return; }
+        if(!rec){ vr.innerHTML = '<div class="small">Especialista não encontrado ou sem vagas.</div>'; return; }
         const first = getFirstAvailableFromWeek(rec.week);
         const totalSemana = rec.week.reduce((s,d)=> s + d.slots.length,0);
         const header = document.createElement('div');
         header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.marginBottom='8px';
         header.innerHTML = `<div class="headline-lg">${rec.especialista.nome} — ${first ? (first.dowName.toLowerCase() + ' — ' + formatDateDDMMYYYY(first.dateISO)) : 'semana'}</div>
                             <div class="small">${rec.especialista.turno} • Vagas (semana): ${totalSemana}</div>`;
-        resultsDiv.appendChild(header);
-        resultsDiv.appendChild(renderSpecialistWeekAvailability(rec.especialista, rec.week));
+        vr.appendChild(header);
+        vr.appendChild(renderSpecialistWeekAvailability(rec.especialista, rec.week));
       } else {
         for(const k in avail){
           const rec = avail[k];
@@ -1028,7 +1148,7 @@
              </div>`;
 
           el.appendChild(renderSpecialistWeekAvailabilityInline(rec.especialista, rec.week));
-          resultsDiv.appendChild(el);
+          vr.appendChild(el);
         }
       }
     });
@@ -1213,13 +1333,17 @@
       }));
     }
 
-    document.getElementById('btnFilterMy').addEventListener('click', ()=>{
-      const from = document.getElementById('filterFrom').value;
-      const to = document.getElementById('filterTo').value;
+    const btnFilterMyEl = document.getElementById('btnFilterMy');
+    if(btnFilterMyEl) btnFilterMyEl.addEventListener('click', ()=>{
+      const fromEl = document.getElementById('filterFrom'); const toEl = document.getElementById('filterTo');
+      const from = fromEl ? fromEl.value : '';
+      const to = toEl ? toEl.value : '';
       renderMyAppointments({ from, to });
     });
-    document.getElementById('btnClearMy').addEventListener('click', ()=>{
-      document.getElementById('filterFrom').value=''; document.getElementById('filterTo').value=''; renderMyAppointments();
+    const btnClearMyEl = document.getElementById('btnClearMy');
+    if(btnClearMyEl) btnClearMyEl.addEventListener('click', ()=>{
+      const fromEl = document.getElementById('filterFrom'); const toEl = document.getElementById('filterTo');
+      if(fromEl) fromEl.value=''; if(toEl) toEl.value=''; renderMyAppointments();
     });
 
     function renderUserHistory(filters = {}){
@@ -1264,21 +1388,27 @@
       });
     }
 
-    document.getElementById('btnAplicarHistUser').addEventListener('click', ()=>{
-      renderUserHistory({ from: document.getElementById('histFrom').value, to: document.getElementById('histTo').value });
+    const btnAplicarHistUserEl = document.getElementById('btnAplicarHistUser');
+    if(btnAplicarHistUserEl) btnAplicarHistUserEl.addEventListener('click', ()=>{
+      const from = document.getElementById('histFrom'); const to = document.getElementById('histTo');
+      renderUserHistory({ from: from ? from.value : '', to: to ? to.value : '' });
     });
-    document.getElementById('btnLimparHistUser').addEventListener('click', ()=>{
-      document.getElementById('histFrom').value=''; document.getElementById('histTo').value=''; renderUserHistory();
+    const btnLimparHistUserEl = document.getElementById('btnLimparHistUser');
+    if(btnLimparHistUserEl) btnLimparHistUserEl.addEventListener('click', ()=>{
+      const from = document.getElementById('histFrom'); const to = document.getElementById('histTo');
+      if(from) from.value=''; if(to) to.value=''; renderUserHistory();
     });
 
-    document.getElementById('btnSolicitarAlteracao').addEventListener('click', ()=>{
+    const btnSolicitarAlteracaoEl = document.getElementById('btnSolicitarAlteracao');
+    if(btnSolicitarAlteracaoEl) btnSolicitarAlteracaoEl.addEventListener('click', ()=>{
       const user = getCurrentUser();
       if(!user) return alert('Faça login.');
       addHistory('paciente','Usuário',`Solicitação de alteração de dados do paciente: ${user.nome}`, { pacienteId: user.id, paciente: user });
       alert('Solicitação enviada à clínica (Caso seja urgente, procure a clinica a qual você é atendido(a).');
     });
 
-    document.getElementById('btnCloseVagasUser').addEventListener('click', ()=> document.getElementById('vagasModal').classList.remove('show'));
+    const btnCloseVagasUserEl = document.getElementById('btnCloseVagasUser');
+    if(btnCloseVagasUserEl) btnCloseVagasUserEl.addEventListener('click', ()=>{ const vm = document.getElementById('vagasModal'); if(vm) vm.classList.remove('show'); });
     function comunicadosElegiveisParaUsuario(){
       const user = getCurrentUser(); if(!user) return [];
       const cfg = JSON.parse(localStorage.getItem(LS.CFG) || '{}');
@@ -1376,13 +1506,14 @@
     }
 
     function updateSyncStatus(){
-      const dot = document.getElementById('syncDot');
-      const text = document.getElementById('syncText');
+      const dot = document.getElementById('sync-dot');
+      const text = document.getElementById('sync-text');
+      if(!dot || !text) return;
       if(navigator.onLine){
-        dot.className = 'sync-dot online';
+        dot.classList.add('online');
         text.textContent = 'Online';
       } else {
-        dot.className = 'sync-dot offline';
+        dot.classList.remove('online');
         text.textContent = 'Offline';
       }
     }
@@ -1410,7 +1541,8 @@
       window.addEventListener('offline', updateSyncStatus);
 
       // Adicionar event listener para botão de sincronização
-      document.getElementById('syncBtn').addEventListener('click', forceSync);
+      const syncBtnEl = document.getElementById('sync-button');
+      if(syncBtnEl) syncBtnEl.addEventListener('click', forceSync);
 
       const session = localStorage.getItem(LS.SESSION);
       if(!session){
