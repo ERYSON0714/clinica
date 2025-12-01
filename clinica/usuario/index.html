@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Usuário - CLÍNICA ETEMFL</title>
+  <title>Usuário - AgendMed</title>
 
   <meta name="theme-color" content="#28a745"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,13 +37,6 @@
     .logo .icon { width:44px; height:44px; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center; color:var(--dark); font-weight:700 }
     .logo .brand-title{ font-weight:800 }
     .logo .brand-sub { font-size:0.85rem; opacity:.9 }
-    .sync-status { display:flex; align-items:center; gap:8px; margin-left:auto; }
-    .sync-dot { width:12px; height:12px; border-radius:50%; display:inline-block; }
-    .sync-dot.online { background:#28a745; }
-    .sync-dot.offline { background:#dc3545; }
-    .sync-text { font-size:0.8rem; font-weight:600; }
-    .sync-btn { background:#007bff; color:#fff; border:none; border-radius:6px; padding:6px 10px; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; gap:4px; }
-    .sync-btn:hover { background:#0056b3; }
     .nav { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
     .nav a { color:#fff; text-decoration:none; padding:10px; border-radius:8px; display:flex; gap:8px; align-items:center; }
     .nav a:hover, .nav a.active { background: rgba(255,255,255,0.06); }
@@ -321,7 +314,7 @@
             <div class="form-group"><label>Cartão SUS</label><input id="loginSus" placeholder="000.0000.0000.0000" /></div>
           </div>
           <div class="login-logo">
-            CLINICA<br>ETEMFL
+            CLINICA<br>AgendMed
           </div>
         </div>
         
@@ -360,13 +353,6 @@
         <div>
           <div id="brandTitle" class="brand-title">Plataforma</div>
           <div id="brandSub" class="brand-sub">Usuário</div>
-        </div>
-        <div class="sync-status">
-          <span class="sync-dot offline" id="syncDot"></span>
-          <span class="sync-text" id="syncText">Offline</span>
-          <button class="sync-btn" id="syncBtn">
-            <i class="fas fa-sync-alt"></i> Sincronizar
-          </button>
         </div>
       </div>
 
@@ -594,11 +580,139 @@
       return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`;
     }
 
-    function read(key){
-      try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e){ return []; }
+    async function apiGet(path){
+      if(window.fetch){ try{ const r = await fetch(path); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+      return await new Promise((resolve)=>{
+        try{ const xhr = new XMLHttpRequest(); xhr.open('GET', path, true); xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } }; xhr.send(); }catch(e){ resolve(null); }
+      });
     }
 
-    function write(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+    async function apiPost(path, payload){
+      if(window.fetch){ try{ const r = await fetch(path, { method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+      return await new Promise((resolve)=>{
+        try{ const xhr = new XMLHttpRequest(); xhr.open('POST', path, true); xhr.setRequestHeader('Content-Type','application/json'); xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } }; xhr.send(JSON.stringify(payload)); }catch(e){ resolve(null); }
+      });
+    }
+
+    async function apiPut(path, payload){
+      if(window.fetch){ try{ const r = await fetch(path, { method:'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+      return await new Promise((resolve)=>{
+        try{ const xhr = new XMLHttpRequest(); xhr.open('PUT', path, true); xhr.setRequestHeader('Content-Type','application/json'); xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } }; xhr.send(JSON.stringify(payload)); }catch(e){ resolve(null); }
+      });
+    }
+
+    async function apiDelete(path){
+      if(window.fetch){ try{ const r = await fetch(path, { method:'DELETE' }); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+      return await new Promise((resolve)=>{
+        try{ const xhr = new XMLHttpRequest(); xhr.open('DELETE', path, true); xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } }; xhr.send(); }catch(e){ resolve(null); }
+      });
+    }
+
+    function _getSyncQueue(){ try{ return JSON.parse(localStorage.getItem('sync_queue_v1')||'[]'); }catch(e){ return []; } }
+    function _setSyncQueue(q){ try{ localStorage.setItem('sync_queue_v1', JSON.stringify(q)); }catch(e){} }
+    function enqueueSync(item){
+      const q = _getSyncQueue();
+      item.id = item.id || ('op_' + Math.random().toString(36).slice(2,9));
+      item.retries = 0;
+      item.createdAt = item.createdAt || new Date().toISOString();
+      q.push(item);
+      _setSyncQueue(q);
+      return item.id;
+    }
+
+    async function apiPostWithRetry(path, payload, maxAttempts=3){
+      let attempt = 0;
+      while(attempt < maxAttempts){
+        attempt++;
+        try{
+          const res = await apiPost(path, payload);
+          if(res) return res;
+        }catch(e){}
+        await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+      }
+      return null;
+    }
+
+    async function processSyncQueue(){
+      const q = _getSyncQueue();
+      if(!q.length) return;
+      const remaining = [];
+      for(const item of q){
+        try{
+          if(item.type === 'create_paciente'){
+            const payload = Object.assign({}, item.payload);
+            delete payload._localId;
+            const res = await apiPostWithRetry('/api/pacientes', payload, 3);
+            if(res && res.id){
+              const pacs = read(LS.PAC);
+              const idx = pacs.findIndex(p => p.id === item.localId || p.id === payload._localId);
+              if(idx > -1){ pacs[idx]._dbId = res.id; write(LS.PAC, pacs); }
+              continue;
+            }
+          } else if(item.type === 'create_agendamento'){
+            const payload = Object.assign({}, item.payload);
+            const res = await apiPostWithRetry('/api/agendamentos/full', payload, 3);
+            if(res && res.id){
+              const ags = read(LS.AG);
+              const aidx = ags.findIndex(a => a.id === item.localAgId);
+              if(aidx > -1){ ags[aidx]._dbId = res.id; if(res.vaga_id) ags[aidx]._vagaDbId = res.vaga_id; write(LS.AG, ags); }
+              if(res.paciente_id){
+                const pacs = read(LS.PAC);
+                const pidx = pacs.findIndex(p => p.id === item.localPacienteId);
+                if(pidx > -1){ pacs[pidx]._dbId = pacs[pidx]._dbId || res.paciente_id; write(LS.PAC, pacs); }
+              }
+              continue;
+            }
+          } else {
+            continue;
+          }
+          item.retries = (item.retries||0) + 1;
+          if(item.retries < 6){ remaining.push(item); }
+        }catch(e){ item.retries = (item.retries||0) + 1; if(item.retries < 6) remaining.push(item); }
+      }
+      _setSyncQueue(remaining);
+    }
+
+    function startSyncWorker(){
+      processSyncQueue().catch(()=>{});
+      if(window._syncWorkerInterval) clearInterval(window._syncWorkerInterval);
+      window._syncWorkerInterval = setInterval(()=>{ processSyncQueue().catch(()=>{}); }, 6000);
+    }
+
+
+    function read(key){ try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e){ return []; } }
+
+    function write(key, value){
+      try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+      (async ()=>{
+        try{
+          if(key === LS.CFG){
+            const cfg = value || {};
+            const payload = { nome_clinica: cfg.nomeClinica || '', endereco: cfg.endereco || '', telefone: cfg.telefone || '', senha_mestre: cfg.masterHash || null };
+            await apiPost('/api/gestores', payload);
+          }
+          if(key === LS.PAC){
+            const arr = Array.isArray(value) ? value : [];
+            for(const p of arr){
+              if(typeof p.id === 'string' && p.id.startsWith('id_')){
+                const payload = { nome: p.nome || '', cpf: p.cpf || '', data_nascimento: p.nascimento || null, senha_cadastro: p.senha || null, telefone: p.telefone || null, email: p.email || null, bairro_id: null, cartao_sus: p.sus || null, observacoes: JSON.stringify({ fromClient:true, meta: { setor: p.setor, bairro: p.bairro } }), _localId: p.id };
+                try{ enqueueSync({ type: 'create_paciente', localId: p.id, payload: payload }); }catch(e){ console.warn('Enqueue paciente failed', e); }
+              }
+            }
+            try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
+          }
+          if(key === LS.COM){
+            const arr = Array.isArray(value) ? value : [];
+            for(const c of arr){
+              if(typeof c.id === 'string' && c.id.startsWith('id_')){
+                const payload = { titulo: c.titulo || '', corpo: c.mensagem || c.mensagem || '', criado_por: 'gestor', visibilidade: c.setor || null };
+                await apiPost('/api/comunicados', payload);
+              }
+            }
+          }
+        }catch(e){ console.warn('Sync to server failed', e); }
+      })();
+    }
     function genId(){ return 'id_' + Math.random().toString(36).slice(2,10); }
     function nowISO(){ return new Date().toISOString(); }
     function generateSlots(startHour, endHour, interval=15){
@@ -1119,6 +1233,12 @@
       openTicketModal(novo);
       renderVagasPanelForUser();
       renderMyAppointments();
+      try{
+        const medicoDbId = especialista && especialista._dbId ? especialista._dbId : null;
+        const pacientePayload = user._dbId ? { id: user._dbId } : { nome: user.nome, cpf: user.cpf, data_nascimento: user.nascimento || null, senha_cadastro: user.senha || null, bairro: user.bairro || '', setor: user.setor || '' };
+        const vagaPayload = { medico_db_id: medicoDbId, data: dateISO, hora_inicio: time, duracao_min: 15 };
+        enqueueSync({ type: 'create_agendamento', localAgId: novo.id, localPacienteId: user.id, payload: { paciente: pacientePayload, vaga: vagaPayload } });
+      }catch(e){ console.warn('Enqueue agendamento failed', e); }
     }
 
     function openTicketModal(ag){
@@ -1188,7 +1308,7 @@
         const ag = read(LS.AG).find(x => x.id === id);
         if(ag) openTicketModal(ag);
       }));
-      tbody.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('click', e => {
+      tbody.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('click', async e => {
         const id = e.currentTarget.dataset.cancel;
         if(!confirm('Deseja cancelar este agendamento?')) return;
         const agsAll = read(LS.AG); const idx = agsAll.findIndex(x => x.id === id);
@@ -1198,6 +1318,11 @@
         ag.status = 'Cancelado';
         ag.cancelReason = 'Cancelado pelo paciente';
         
+        try{
+          const dbId = ag._dbId || (typeof ag.id === 'string' && ag.id.startsWith('db_') ? ag.id.replace(/^db_/, '') : null);
+          if(dbId){ await apiPut('/api/agendamentos/' + dbId, { status: 'Cancelado', motivo_cancelamento: ag.cancelReason }); }
+        }catch(err){ console.warn('Failed to sync cancel to server', err); }
+
         write(LS.AG, agsAll);
         addHistory('confirmacao','Usuário',`Agendamento cancelado pelo usuário: ${ag.pacienteNome}`, { agendamento: ag });
 
@@ -1375,43 +1500,78 @@
       } catch(e){}
     }
 
-    function updateSyncStatus(){
-      const dot = document.getElementById('syncDot');
-      const text = document.getElementById('syncText');
-      if(navigator.onLine){
-        dot.className = 'sync-dot online';
-        text.textContent = 'Online';
-      } else {
-        dot.className = 'sync-dot offline';
-        text.textContent = 'Offline';
-      }
-    }
-
-    function forceSync(){
-      if(!navigator.onLine){
-        alert('Sem conexão com a internet');
-        return;
-      }
-      // Aqui você pode implementar a lógica de sincronização manual
-      // Por enquanto, apenas mostra uma mensagem
-      alert('Sincronização manual iniciada. Dados serão sincronizados em breve.');
-    }
-
     function boot(){
       registerServiceWorker();
       initDefaults();
       populateBairrosSelect();
       renderClinicContact();
+      (async ()=>{
+        try{
+          const gestores = await apiGet('/api/gestores');
+          if(Array.isArray(gestores) && gestores.length){
+            const s = gestores[0];
+            const cfg = { nomeClinica: s.nome_clinica || '', endereco: s.endereco || '', telefone: s.telefone || '', setor: '', masterHash: null };
+            localStorage.setItem(LS.CFG, JSON.stringify(cfg));
+            renderClinicContact();
+          }
+        }catch(e){}
+        try{
+          const pacs = await apiGet('/api/pacientes');
+          if(Array.isArray(pacs)){
+            const mapped = pacs.map(p => ({ id: 'db_' + p.id, _dbId: p.id, nome: p.nome || '', nascimento: p.data_nascimento || '', cpf: p.cpf || '', sus: p.cartao_sus || '', bairro: '', setor: '', createdBy: 'db', notifications: [] }));
+            localStorage.setItem(LS.PAC, JSON.stringify(mapped));
+          }
+        }catch(e){}
+        try{
+          const meds = await apiGet('/api/medicos');
+          if(Array.isArray(meds)){
+            const mapped = meds.map(m => ({ id: 'db_' + m.id, _dbId: m.id, nome: m.nome || m.nome, especialidade: m.especialidade || '', turno: 'manhã', vagasManha: 10, vagasTarde: 10, dias: [1,2,3,4,5], ativo: true }));
+            localStorage.setItem(LS.ESP, JSON.stringify(mapped));
+          }
+        }catch(e){}
+        try{
+          const coms = await apiGet('/api/comunicados');
+          if(Array.isArray(coms)){
+            const mapped = coms.map(c => ({ id: 'db_' + (c.id||''), _dbId: c.id, titulo: c.titulo || '', mensagem: c.corpo || c.body || '', setor: c.visibilidade || '', createdAt: c.created_at || nowISO() }));
+            localStorage.setItem(LS.COM, JSON.stringify(mapped));
+          }
+        }catch(e){}
+      })();
+      try{
+        const proto = (location.protocol === 'https:') ? 'wss' : 'ws';
+        const ws = new WebSocket(proto + '://' + location.host + '/ws');
+        ws.addEventListener('open', ()=> console.log('WS conectado (usuario)'));
+        ws.addEventListener('message', (ev)=>{
+          try{
+            const msg = JSON.parse(ev.data);
+            if(msg.type === 'init' && Array.isArray(msg.gestores) && msg.gestores.length){
+              const s = msg.gestores[0];
+              const cfgRaw = localStorage.getItem(LS.CFG) || '{}';
+              const cfg = cfgRaw ? JSON.parse(cfgRaw) : {};
+              cfg.nomeClinica = s.nome_clinica || cfg.nomeClinica || '';
+              cfg.endereco = s.endereco || cfg.endereco || '';
+              cfg.telefone = s.telefone || cfg.telefone || '';
+              localStorage.setItem(LS.CFG, JSON.stringify(cfg));
+              renderClinicContact();
+            } else if(msg.type === 'gestor_update' && msg.payload){
+              const s = msg.payload;
+              const cfgRaw = localStorage.getItem(LS.CFG) || '{}';
+              const cfg = cfgRaw ? JSON.parse(cfgRaw) : {};
+              cfg.nomeClinica = s.nome_clinica || cfg.nomeClinica || '';
+              cfg.endereco = s.endereco || cfg.endereco || '';
+              cfg.telefone = s.telefone || cfg.telefone || '';
+              localStorage.setItem(LS.CFG, JSON.stringify(cfg));
+              renderClinicContact();
+            }
+          }catch(e){ console.warn('WS message parse error (usuario)', e); }
+        });
+        ws.addEventListener('close', ()=> console.log('WS desconectado (usuario)'));
+        ws.addEventListener('error', (e)=> console.warn('WS erro (usuario)', e));
+        window._wsUsuario = ws;
+      }catch(e){ console.warn('WebSocket não disponível (usuario)', e); }
       applyMasksOnInputs();
-      updateSyncStatus();
 
-      // Adicionar event listeners para status de conectividade
-      window.addEventListener('online', updateSyncStatus);
-      window.addEventListener('offline', updateSyncStatus);
-
-      // Adicionar event listener para botão de sincronização
-      document.getElementById('syncBtn').addEventListener('click', forceSync);
-
+      try{ startSyncWorker(); }catch(e){ console.warn('Failed to start sync worker', e); }
       const session = localStorage.getItem(LS.SESSION);
       if(!session){
         document.getElementById('app').style.display = 'flex';
