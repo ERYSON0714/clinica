@@ -7,7 +7,8 @@
   <title>Gestão - CLÍNICA ETEMFL</title>
 
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=dBwbdz9g5qFohKah-Kab8tCayejQBcOKzCiLtWHE3ejI0QkHAmsQ4YjMKkvkeOLAoGx-AEs24lvK9XsJnddbGZm6ikGbAuBQJ9lHS-5iW5I" charset="UTF-8"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
+  <script src="/gestor/sync-database.js"></script>
 
   <style>
     :root{
@@ -27,7 +28,7 @@
     .app { display:flex; min-height:100vh; gap:18px; }
     .sidebar { width:300px; background:var(--dark); color:#fff; padding:20px; display:flex; flex-direction:column; }
     .logo { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-    .logo .icon { width:44px; height:44px; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center; color:var(--dark); font-weight:700 }
+    .logo .icon { width:44px; height:44; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center; color:var(--dark); font-weight:700 }
     .nav { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
     .nav a { color:#fff; text-decoration:none; padding:10px; border-radius:8px; display:flex; gap:8px; align-items:center; }
     .nav a:hover, .nav a.active { background: rgba(255,255,255,0.06); }
@@ -61,42 +62,7 @@
     .contact-card * { color:#000 !important; }
     .contact-card .clinic-name{ font-weight:800; font-size:1rem; }
     .contact-card .clinic-line{ font-size:0.92rem; margin-top:6px; }
-    .sync-status { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-    .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
-    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #dc3545; }
-    .sync-dot.online { background: #28a745; }
-    .sync-button { background: none; border: none; color: #fff; cursor: pointer; padding: 4px; border-radius: 4px; }
-    .sync-button:hover { background: rgba(255,255,255,0.1); }
     @media(max-width:900px){ .sidebar{ display:none } .grid{ grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); } }
-
-    /* mobile menu toggle — match usuario */
-    .mobile-menu-toggle {
-      display: none;
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      z-index: 1000;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 10px;
-      font-size: 1.2rem;
-    }
-    @media(max-width:900px){
-      .sidebar {
-        position: fixed;
-        left: -100%;
-        top: 0;
-        height: 100vh;
-        width: 280px;
-        z-index: 999;
-        transition: left 0.3s ease;
-        overflow-y: auto;
-      }
-      .sidebar.mobile-open { left: 0; }
-      .mobile-menu-toggle { display:block; }
-    }
 
     pre.history {
       background: #f9f9f9;       
@@ -120,13 +86,10 @@
       color: #222;
       margin-bottom: 10px;
     }
-</style>
+  </style>
 
 </head>
 <body>
-  <button class="mobile-menu-toggle" id="mobileMenuToggle">
-    <i class="fas fa-bars"></i>
-  </button>
   <div class="app">
     <aside class="sidebar" role="navigation" aria-label="Menu principal">
       <div class="logo">
@@ -134,15 +97,6 @@
         <div>
           <div id="brandTitle" class="brand-title">Plataforma</div>
           <div id="brandSub" class="brand-sub">GESTOR</div>
-        </div>
-        <div id="sync-status" class="sync-status">
-          <div class="sync-indicator" id="sync-indicator">
-            <span class="sync-dot" id="sync-dot"></span>
-            <span class="sync-text" id="sync-text">Offline</span>
-          </div>
-          <button id="sync-button" class="sync-button" title="Sincronizar dados">
-            <i class="fas fa-sync-alt"></i>
-          </button>
         </div>
       </div>
 
@@ -214,10 +168,11 @@
           <input type="hidden" id="espId" value="" />
           <div class="form-group"><label>Nome do especialista</label><input id="espNome" type="text" placeholder="Ex: Dra. Maria Silva" required /></div>
           <div style="display:flex;gap:12px;">
-            <div style="flex:1" class="form-group"><label>Especialidade</label>
+            <div style="flex:1" class="form-group">
+              <label>Especialidade</label>
               <select id="espEspecialidade" required>
                 <option value="">-- Selecione --</option>
-                <option value="Médico">Médico</option>
+                <option value="Clínico Geral">Clínico Geral</option>
                 <option value="Dentista">Dentista</option>
                 <option value="Psicólogo">Psicólogo</option>
                 <option value="Nutricionista">Nutricionista</option>
@@ -225,10 +180,14 @@
                 <option value="Médico Veterinário">Médico Veterinário</option>
                 <option value="Fisioterapeuta">Fisioterapeuta</option>
                 <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
+                <option value="Oftalmologista">Oftalmologista</option>
                 <option value="Outro">Outro</option>
               </select>
             </div>
-            <div style="flex:1" class="form-group"><label id="conselhoLabel">Conselho Regional</label><input id="espConselho" type="text" placeholder="Ex: 12345" /></div>
+            <div style="flex:1" class="form-group">
+              <label>Conselho Regional (ex: CRM-09870)</label>
+              <input id="espConselho" type="text" placeholder="Ex: CRM-09870" />
+            </div>
           </div>
           <div class="form-group"><label>Turno</label>
             <div style="display:flex;gap:12px;">
@@ -448,11 +407,7 @@
     </div>
   </div>
 
-  <script src="sync.js"></script>
   <script>
-    // Se true, força o indicador do GESTOR a usar o estado do navegador (navigator.onLine)
-    const FORCE_USE_NAV_ONLINE = true;
-
     const LS = {
       PAC: 'db_pacientes_v3',
       ESP: 'db_especialistas_v3',
@@ -461,6 +416,106 @@
       HIST:'db_history_v1',
       COM: 'db_comunicados_v1'
     };
+
+    // Mapeamento de especialidades para tipo de conselho
+    const ESPECIALIDADE_CONSELHO = {
+      'Clínico Geral': 'CRM',
+      'Dentista': 'CRO',
+      'Psicólogo': 'CRP',
+      'Nutricionista': 'CRN',
+      'Fonoaudiólogo': 'CRFA',
+      'Médico Veterinário': 'CRMV',
+      'Fisioterapeuta': 'CREFITO',
+      'Terapeuta Ocupacional': 'CREFITO',
+      'Oftalmologista': 'CRM',
+      'Outro': ''
+    };
+    
+    // --- API helpers to sync config between browsers ---
+    async function apiGetGestores(){
+      // Prefer fetch, but fallback to XHR for IE
+      if(window.fetch){
+        try{
+          const res = await fetch('/api/gestores', { credentials: 'same-origin' });
+          if(!res.ok) return null;
+          const data = await res.json();
+          return Array.isArray(data) ? data : null;
+        }catch(e){ return null; }
+      }
+      return new Promise((resolve) => {
+        try{
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET','/api/gestores', true);
+          xhr.onreadystatechange = function(){
+            if(xhr.readyState === 4){
+              if(xhr.status >= 200 && xhr.status < 300){
+                try{ const d = JSON.parse(xhr.responseText); resolve(Array.isArray(d) ? d : null); } catch(e){ resolve(null); }
+              } else resolve(null);
+            }
+          };
+          xhr.send();
+        }catch(e){ resolve(null); }
+      });
+    }
+
+      // --- Sync queue and retry helpers ---
+      function _getSyncQueue(){ try{ return JSON.parse(localStorage.getItem('sync_queue_v1')||'[]'); }catch(e){ return []; } }
+      function _setSyncQueue(q){ try{ localStorage.setItem('sync_queue_v1', JSON.stringify(q)); }catch(e){} }
+      function enqueueSync(item){ const q=_getSyncQueue(); q.push(item); _setSyncQueue(q); }
+
+      async function apiPostWithRetry(path, payload, attempts=3){
+        for(let i=0;i<attempts;i++){
+          try{
+            const res = await fetch(path, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+            if(res.ok) return await res.json();
+          } catch(e){}
+          await new Promise(r=>setTimeout(r, 500*(i+1)));
+        }
+        return null;
+      }
+
+      async function processSyncQueue(){
+        const q = _getSyncQueue();
+        if(!q.length) return;
+        const remaining = [];
+        for(const item of q){
+          try{
+            if(item.method === 'POST'){
+              const res = await apiPostWithRetry(item.path, item.payload, 3);
+              if(!res || !res.id){ remaining.push(Object.assign({}, item, { attempts: (item.attempts||0)+1 })); continue; }
+            } else if(item.method === 'PUT'){
+              try{ const r = await fetch(item.path, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item.payload) }); if(!r.ok){ remaining.push(Object.assign({}, item, { attempts: (item.attempts||0)+1 })); continue; } }
+              catch(e){ remaining.push(Object.assign({}, item, { attempts: (item.attempts||0)+1 })); continue; }
+            }
+          } catch(e){ remaining.push(Object.assign({}, item, { attempts: (item.attempts||0)+1 })); }
+        }
+        _setSyncQueue(remaining.filter(it => (it.attempts||0) < 10));
+      }
+
+      function startSyncWorker(){
+        try{ setInterval(processSyncQueue, 5000); } catch(e){}
+      }
+
+    async function apiSaveGestor(payload){
+      if(window.fetch){
+        try{
+          const res = await fetch('/api/gestores', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'same-origin'
+          });
+          if(!res.ok) return null;
+          return await res.json();
+        }catch(e){ return null; }
+      }
+      return new Promise((resolve) => {
+        try{
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST','/api/gestores', true);
+          xhr.setRequestHeader('Content-Type','application/json');
+          xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } };
+          xhr.send(JSON.stringify(payload));
+        }catch(e){ resolve(null); }
+      });
+    }
     
     let agIdsToAction = []; 
     const pad2 = n => (n < 10 ? '0' + n : '' + n);
@@ -477,45 +532,77 @@
       date.setHours(0,0,0,0);
       return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`;
     }
-    // Storage bridge: tenta sincronizar com servidor (tabela client_storage). Se servidor indisponível, usa localStorage.
-    let serverStorage = {};
-    let serverAvailable = false;
-
-    async function loadServerStorage(){
-      try{
-        const resp = await fetch('/storage/all');
-        if(!resp.ok) throw new Error('not ok');
-        serverStorage = await resp.json();
-        serverAvailable = true;
-        // sincronizar para localStorage para compatibilidade com código existente
-        Object.keys(serverStorage).forEach(k => { try { localStorage.setItem(k, JSON.stringify(serverStorage[k])); } catch(e){} });
-        console.log('Storage carregado do servidor e sincronizado com localStorage.');
-      } catch(e){
-        serverAvailable = false;
-        serverStorage = {};
-        console.warn('Não foi possível carregar storage do servidor, fallback para localStorage.');
-      }
+    // local read/write keep cache for UI, but we persist to DB via API calls
+    async function apiGet(path){
+      if(window.fetch){ try{ const r = await fetch(path); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+      return await new Promise((resolve)=>{
+        try{ const xhr = new XMLHttpRequest(); xhr.open('GET', path, true); xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } }; xhr.send(); }catch(e){ resolve(null); }
+      });
     }
 
-    function read(key){
-      // Retorna sincronizado do serverStorage se disponível, copie para evitar referência
-      if(serverAvailable){
-        try { return JSON.parse(JSON.stringify((serverStorage[key] === undefined) ? [] : serverStorage[key])); } catch(e) { return serverStorage[key] || []; }
-      }
-      try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e){ return []; }
+    async function apiPost(path, payload){
+      if(window.fetch){ try{ const r = await fetch(path, { method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+      return await new Promise((resolve)=>{
+        try{ const xhr = new XMLHttpRequest(); xhr.open('POST', path, true); xhr.setRequestHeader('Content-Type','application/json'); xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } }; xhr.send(JSON.stringify(payload)); }catch(e){ resolve(null); }
+      });
     }
 
+    async function apiPut(path, payload){
+      if(window.fetch){ try{ const r = await fetch(path, { method:'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+      return await new Promise((resolve)=>{
+        try{ const xhr = new XMLHttpRequest(); xhr.open('PUT', path, true); xhr.setRequestHeader('Content-Type','application/json'); xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } }; xhr.send(JSON.stringify(payload)); }catch(e){ resolve(null); }
+      });
+    }
+
+    async function apiDelete(path){
+      if(window.fetch){ try{ const r = await fetch(path, { method:'DELETE' }); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+      return await new Promise((resolve)=>{
+        try{ const xhr = new XMLHttpRequest(); xhr.open('DELETE', path, true); xhr.onreadystatechange = function(){ if(xhr.readyState===4){ if(xhr.status>=200 && xhr.status<300){ try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve(null); } } else resolve(null); } }; xhr.send(); }catch(e){ resolve(null); }
+      });
+    }
+
+    // read from local cache (localStorage) but return empty arrays as fallback
+    function read(key){ try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e){ return []; } }
+
+    // write to local cache AND attempt to persist to server for key types we support
     function write(key, value){
-      // Atualiza local imediatamente
-      try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) { /* ignore */ }
-      // Atualiza cache local e tenta persistir no servidor (assíncrono)
-      serverStorage[key] = value;
-      if(serverAvailable){
-        fetch('/storage/' + encodeURIComponent(key), {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value })
-        }).catch(err => { console.warn('Falha ao salvar storage no servidor:', err.message); serverAvailable = false; });
-      }
+      try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+      // asynchronously sync to server for certain keys
+      (async ()=>{
+        try{
+          // Desabilitar temporariamente POST para /api/gestores por erro 500
+          // if(key === LS.CFG){
+          //   const cfg = value || {};
+          //   const payload = { nome_clinica: cfg.nomeClinica || '', endereco: cfg.endereco || '', telefone: cfg.telefone || '', senha_mestre: cfg.masterHash || null };
+          //   await apiPost('/api/gestores', payload);
+          // }
+          if(key === LS.PAC){
+            // send any newly created patients (id starting with 'id_') to server
+            const arr = Array.isArray(value) ? value : [];
+            for(const p of arr){
+              if(typeof p.id === 'string' && p.id.startsWith('id_')){
+                const payload = { nome: p.nome || '', cpf: p.cpf || '', data_nascimento: p.nascimento || null, senha_cadastro: p.senha || null, telefone: p.telefone || null, email: p.email || null, bairro_id: null, cartao_sus: p.sus || null, observacoes: JSON.stringify({ fromClient:true, meta: { setor: p.setor, bairro: p.bairro } }) };
+                const res = await apiPost('/api/pacientes', payload);
+                if(res && res.id){
+                  // keep DB id reference
+                  p._dbId = res.id;
+                }
+              }
+            }
+            // persist updated cache after potential id replacements
+            try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
+          }
+          if(key === LS.COM){
+            const arr = Array.isArray(value) ? value : [];
+            for(const c of arr){
+              if(typeof c.id === 'string' && c.id.startsWith('id_')){
+                const payload = { titulo: c.titulo || '', corpo: c.mensagem || c.mensagem || '', criado_por: 'gestor', visibilidade: c.setor || null };
+                await apiPost('/api/comunicados', payload);
+              }
+            }
+          }
+        }catch(e){ console.warn('Sync to server failed', e); }
+      })();
     }
     function genId(){ return 'id_' + Math.random().toString(36).slice(2,10); }
     function nowISO(){ return new Date().toISOString(); }
@@ -579,6 +666,55 @@
       if(!Array.isArray(read(LS.AG))) write(LS.AG, []);
       if(!Array.isArray(read(LS.HIST))) write(LS.HIST, []);
       if(!Array.isArray(read(LS.COM))) write(LS.COM, []);
+    }
+
+    // load configuration from server (if any) and merge into localStorage CFG
+    async function loadConfigFromServer(){
+      // load gestor/config
+      const server = await apiGetGestores();
+      if(server && server.length){
+        const s = server[0];
+        const cfgRaw = localStorage.getItem(LS.CFG);
+        const cfg = cfgRaw ? JSON.parse(cfgRaw) : { nomeClinica:'', endereco:'', telefone:'', setor:'', masterHash: null };
+        cfg.nomeClinica = s.nome_clinica || cfg.nomeClinica || '';
+        cfg.endereco = s.endereco || cfg.endereco || '';
+        cfg.telefone = s.telefone || cfg.telefone || '';
+        localStorage.setItem(LS.CFG, JSON.stringify(cfg));
+        renderClinicContact();
+      }
+
+      // try to fetch patients, medicos, comunicados and agendamentos and populate local cache
+      try{
+        const pacs = await apiGet('/api/pacientes');
+        if(Array.isArray(pacs)){
+          const mapped = pacs.map(p => ({ id: 'db_' + p.id, _dbId: p.id, _synced: true, nome: p.nome || '', nascimento: p.data_nascimento || '', cpf: p.cpf || '', sus: p.cartao_sus || '', bairro: '', setor: '', createdBy: 'db', notifications: [] }));
+          localStorage.setItem(LS.PAC, JSON.stringify(mapped));
+        }
+      }catch(e){}
+
+      try{
+        const meds = await apiGet('/api/medicos');
+        if(Array.isArray(meds)){
+          const mapped = meds.map(m => ({ id: 'db_' + m.id, _dbId: m.id, _synced: true, nome: m.nome || m.nome, especialidade: m.especialidade || '', crm: m.registro_profissional || '', turno: 'manhã', vagasManha: 10, vagasTarde: 10, dias: [1,2,3,4,5], ativo: true }));
+          localStorage.setItem(LS.ESP, JSON.stringify(mapped));
+        }
+      }catch(e){}
+
+      try{
+        const coms = await apiGet('/api/comunicados');
+        if(Array.isArray(coms)){
+          const mapped = coms.map(c => ({ id: 'db_' + (c.id||''), _dbId: c.id, _synced: true, titulo: c.titulo || '', mensagem: c.corpo || c.body || '', setor: c.visibilidade || '', createdAt: c.created_at || nowISO() }));
+          localStorage.setItem(LS.COM, JSON.stringify(mapped));
+        }
+      }catch(e){}
+
+      try{
+        const ags = await apiGet('/api/agendamentos');
+        if(Array.isArray(ags)){
+          const mapped = ags.map(a => ({ id: 'db_' + (a.id||''), _dbId: a.id, _synced: true, pacienteId: a.paciente_id ? 'db_' + a.paciente_id : '', pacienteNome: '', pacienteCpf: '', especialistaId: a.vaga_id ? 'db_vaga_' + a.vaga_id : '', especialistaNome: '', especialidade: '', data: a.data || null, hora: a.hora || null, createdAt: a.created_at || nowISO(), status: a.status || 'Pendente', agendadoPorGestor: a.criado_por === 'gestor' }));
+          localStorage.setItem(LS.AG, JSON.stringify(mapped));
+        }
+      }catch(e){}
     }
 
     function addHistory(type, actor, summary, payload){
@@ -709,7 +845,7 @@
         card.innerHTML = `<div style="display:flex;justify-content:space-between">
           <div>
             <h3>${sp.nome}</h3>
-            <div class="small">Especialidade: <strong>${sp.especialidade}</strong>${sp.conselho ? ' • Conselho: <strong>' + sp.conselho + '</strong>' : ''}</div>
+            <div class="small">Especialidade: <strong>${sp.especialidade}</strong></div>
             <div class="small">Turno: <strong>${sp.turno}</strong> • Dias: <strong>${dias}</strong></div>
           </div>
           <div style="text-align:right">
@@ -966,6 +1102,23 @@
       document.getElementById('vagasModal').classList.remove('show');
       renderVagasPanel(); renderEspecialistasGrid(); renderAgendamentosTable(); renderHistoricoList();
       openTicketModal(novo); alert('Agendamento criado e confirmado. O usuário foi notificado.');
+      // attempt to persist the agendamento to DB when possible
+      (async ()=>{
+        try{
+          const medicoDbId = suggestion.especialista && suggestion.especialista._dbId ? suggestion.especialista._dbId : null;
+          if(!medicoDbId) return; // cannot create vaga in DB without medico id
+          const pacientePayload = pac._dbId ? { id: pac._dbId } : { nome: pac.nome, cpf: pac.cpf, data_nascimento: pac.nascimento || null, senha_cadastro: pac.senha || null, bairro: pac.bairro || '', setor: pac.setor || '' };
+          const vagaPayload = { medico_db_id: medicoDbId, data: suggestion.dateISO, hora_inicio: suggestion.time, duracao_min: 15 };
+          const res = await apiPost('/api/agendamentos/full', { paciente: pacientePayload, vaga: vagaPayload });
+          if(res && res.id){
+            // store DB id references locally
+            novo._dbId = res.id;
+            novo._vagaDbId = res.vaga_id;
+            if(res.paciente_id) pac._dbId = pac._dbId || res.paciente_id;
+            write(LS.AG, ags); write(LS.PAC, pacs);
+          }
+        }catch(e){ console.warn('Sync agendamento failed', e); }
+      })();
     });
 
     function openTicketModal(ag){
@@ -1002,42 +1155,48 @@
       document.getElementById('btnCloseTicket').onclick = () => overlay.classList.remove('show');
     }
 
-    function confirmAppointments(ids) {
-        if (!ids || ids.length === 0) return;
+    async function confirmAppointments(ids) {
+      if (!ids || ids.length === 0) return;
 
-        const ags = read(LS.AG);
-        const pacs = read(LS.PAC);
-        let confirmedCount = 0;
-        
-        ids.forEach(id => {
-            const ag = ags.find(a => a.id === id);
-            if (ag && (ag.status === 'Pendente' || ag.status === 'Cancelado')) {
-                ag.status = 'Confirmado';
-                delete ag.cancelReason; 
+      const ags = read(LS.AG);
+      const pacs = read(LS.PAC);
+      let confirmedCount = 0;
 
-                addHistory('confirmacao', 'Gestor', `Agendamento confirmado: ${ag.pacienteNome}`, { agendamento: ag });
+      for(const id of ids){
+        const ag = ags.find(a => a.id === id);
+        if (ag && (ag.status === 'Pendente' || ag.status === 'Cancelado')) {
+          ag.status = 'Confirmado';
+          delete ag.cancelReason; 
 
-                const patient = pacs.find(p => p.cpf === ag.pacienteCpf);
-                if (patient) {
-                    patient.notifications = patient.notifications || [];
-                    patient.notifications.push({
-                        id: genId(),
-                        titulo: 'Agendamento Confirmado',
-                        mensagem: `Seu agendamento em ${formatDateDDMMYYYY(ag.data)} às ${ag.hora} foi confirmado.`,
-                        createdAt: nowISO()
-                    });
-                }
-                confirmedCount++;
-            }
-        });
+          addHistory('confirmacao', 'Gestor', `Agendamento confirmado: ${ag.pacienteNome}`, { agendamento: ag });
 
-        if (confirmedCount > 0) {
-            write(LS.AG, ags);
-            write(LS.PAC, pacs);
-            alert(`${confirmedCount} agendamento(s) confirmado(s) com sucesso!`);
-            renderAgendamentosTable();
-            renderHistoricoList();
+          const patient = pacs.find(p => p.cpf === ag.pacienteCpf);
+          if (patient) {
+            patient.notifications = patient.notifications || [];
+            patient.notifications.push({
+              id: genId(),
+              titulo: 'Agendamento Confirmado',
+              mensagem: `Seu agendamento em ${formatDateDDMMYYYY(ag.data)} às ${ag.hora} foi confirmado.`,
+              createdAt: nowISO()
+            });
+          }
+          // sync to server if this agendamento has DB id
+          try{
+            const dbId = ag._dbId || (typeof ag.id === 'string' && ag.id.startsWith('db_') ? ag.id.replace(/^db_/, '') : null);
+            if(dbId){ await apiPut('/api/agendamentos/' + dbId, { status: 'Confirmado' }); }
+          }catch(e){ console.warn('Sync confirm agendamento failed', e); }
+
+          confirmedCount++;
         }
+      }
+
+      if (confirmedCount > 0) {
+        write(LS.AG, ags);
+        write(LS.PAC, pacs);
+        alert(`${confirmedCount} agendamento(s) confirmado(s) com sucesso!`);
+        renderAgendamentosTable();
+        renderHistoricoList();
+      }
     }
 
     function openCancelModal(ids) {
@@ -1049,7 +1208,7 @@
         document.getElementById('otherReasonGroup').style.display = 'none';
     }
 
-    function processCancellation() {
+    async function processCancellation() {
         let reason = document.getElementById('cancelReasonSelect').value;
         if (reason === 'outro') {
             reason = document.getElementById('cancelReasonOther').value.trim();
@@ -1059,25 +1218,30 @@
         const ags = read(LS.AG);
         const pacs = read(LS.PAC);
         let updatedCount = 0;
-        agIdsToAction.forEach(id => {
-            const ag = ags.find(a => a.id === id);
-            if (ag && ag.status !== 'Cancelado') {
-                ag.status = 'Cancelado';
-                ag.cancelReason = reason;
-                addHistory('confirmacao', 'Gestor', `Agendamento cancelado: ${ag.pacienteNome}`, { agendamento: ag });
-                const patient = pacs.find(p => p.cpf === ag.pacienteCpf);
-                if (patient) {
-                    patient.notifications = patient.notifications || [];
-                    patient.notifications.push({
-                        id: genId(),
-                        titulo: 'Agendamento Cancelado',
-                        mensagem: `Sua consulta em ${formatDateDDMMYYYY(ag.data)} às ${ag.hora} foi cancelada. Motivo: ${reason}`,
-                        createdAt: nowISO()
-                    });
-                }
-                updatedCount++;
-            }
-        });
+      for(const id of agIdsToAction){
+        const ag = ags.find(a => a.id === id);
+        if (ag && ag.status !== 'Cancelado') {
+          ag.status = 'Cancelado';
+          ag.cancelReason = reason;
+          addHistory('confirmacao', 'Gestor', `Agendamento cancelado: ${ag.pacienteNome}`, { agendamento: ag });
+          const patient = pacs.find(p => p.cpf === ag.pacienteCpf);
+          if (patient) {
+            patient.notifications = patient.notifications || [];
+            patient.notifications.push({
+              id: genId(),
+              titulo: 'Agendamento Cancelado',
+              mensagem: `Sua consulta em ${formatDateDDMMYYYY(ag.data)} às ${ag.hora} foi cancelada. Motivo: ${reason}`,
+              createdAt: nowISO()
+            });
+          }
+          // sync cancellation to server if possible
+          try{
+            const dbId = ag._dbId || (typeof ag.id === 'string' && ag.id.startsWith('db_') ? ag.id.replace(/^db_/, '') : null);
+            if(dbId){ await apiPut('/api/agendamentos/' + dbId, { status: 'Cancelado', motivo_cancelamento: reason }); }
+          }catch(e){ console.warn('Sync cancel agendamento failed', e); }
+          updatedCount++;
+        }
+      }
         
         if(updatedCount > 0) {
             write(LS.AG, ags);
@@ -1108,24 +1272,38 @@
       const id = document.getElementById('espId').value;
       const nome = document.getElementById('espNome').value.trim();
       const especialidade = document.getElementById('espEspecialidade').value.trim();
-      const conselho = document.getElementById('espConselho').value.trim();
+      const conselhoCompleto = document.getElementById('espConselho').value.trim();
       const turno = document.querySelector('input[name="espTurno"]:checked').value;
       const vagasManha = parseInt(document.getElementById('espVagasManha').value) || 0;
       const vagasTarde = parseInt(document.getElementById('espVagasTarde').value) || 0;
       const dias = Array.from(document.querySelectorAll('.dayChk')).filter(c=>c.checked).map(c=>Number(c.value));
       if(!nome || !especialidade || dias.length===0){ alert('Preencha nome, especialidade e selecione pelo menos um dia.'); return; }
       const specs = read(LS.ESP);
-      if(id){
+        if(id){
         const idx = specs.findIndex(s => s.id === id);
         if(idx >= 0){
           const before = Object.assign({}, specs[idx]);
-          specs[idx].nome = nome; specs[idx].especialidade = especialidade; specs[idx].conselho = conselho; specs[idx].turno = turno;
+          specs[idx].nome = nome; specs[idx].especialidade = especialidade; specs[idx].crm = conselhoCompleto; specs[idx].turno = turno;
           specs[idx].vagasManha = vagasManha; specs[idx].vagasTarde = vagasTarde; specs[idx].dias = dias; specs[idx].ativo = true;
           write(LS.ESP, specs); addHistory('especialista','Gestor',`Especialista editado: ${nome}`, { before, after: specs[idx] });
+          // sync update to server if this specialist is mapped to DB
+          try{
+            const sp = specs[idx];
+            const dbId = sp._dbId || (typeof sp.id === 'string' && sp.id.startsWith('db_') ? sp.id.replace(/^db_/, '') : null);
+            if(dbId){
+              const payload = { nome: sp.nome || '', especialidade: sp.especialidade || '', registro_profissional: sp.crm || '', tipo_conselho: ESPECIALIDADE_CONSELHO[sp.especialidade] || '' };
+              apiPut('/api/medicos/' + dbId, payload).catch(()=>{});
+            }
+          }catch(e){ console.warn('Sync especialista update failed', e); }
         }
       } else {
-        const novo = { id: genId(), nome, especialidade, conselho, turno, vagasManha, vagasTarde, dias, ativo:true };
-        specs.push(novo); write(LS.ESP, specs); addHistory('especialista','Gestor',`Especialista incluído: ${nome}`, { especialista: novo });
+        const novo = { id: genId(), nome, especialidade, crm: conselhoCompleto, turno, vagasManha, vagasTarde, dias, ativo:true };
+        specs.push(novo);
+        console.log('🔵 [DEBUG] Antes de write(LS.ESP) - specs:', specs);
+        console.log('🔵 [DEBUG] window._app.write existe?', typeof window._app.write);
+        write(LS.ESP, specs);
+        console.log('🔵 [DEBUG] Depois de write(LS.ESP)');
+        addHistory('especialista','Gestor',`Especialista incluído: ${nome}`, { especialista: novo });
       }
 
       document.getElementById('formEspecialista').reset(); document.getElementById('espId').value = '';
@@ -1135,17 +1313,31 @@
     function loadEspecialistaToForm(id){
       const specs = read(LS.ESP); const sp = specs.find(s => s.id === id);
       if(!sp) return alert('Especialista não encontrado.');
-      document.getElementById('espId').value = sp.id; document.getElementById('espNome').value = sp.nome; 
+      document.getElementById('espId').value = sp.id; 
+      document.getElementById('espNome').value = sp.nome; 
       document.getElementById('espEspecialidade').value = sp.especialidade;
-      document.getElementById('espConselho').value = sp.conselho || '';
+      document.getElementById('espConselho').value = sp.crm || '';
       document.querySelectorAll('input[name="espTurno"]').forEach(r => r.checked = (r.value === sp.turno));
-      document.getElementById('espVagasManha').value = sp.vagasManha || 0; document.getElementById('espVagasTarde').value = sp.vagasTarde || 0;
+      document.getElementById('espVagasManha').value = sp.vagasManha || 0; 
+      document.getElementById('espVagasTarde').value = sp.vagasTarde || 0;
       document.querySelectorAll('.dayChk').forEach(ch => ch.checked = (sp.dias || []).includes(Number(ch.value)));
     }
 
-    function deleteEspecialista(id){
+    // Atualizar conselho quando especialidade mudar (apenas prefixo)
+    document.getElementById('espEspecialidade').addEventListener('change', (e)=>{
+      const esp = e.target.value;
+      const prefixo = ESPECIALIDADE_CONSELHO[esp] || '';
+      // Limpa o campo e mostra apenas o prefixo
+      document.getElementById('espConselho').value = prefixo;
+    });
+
+    async function deleteEspecialista(id){
       if(!confirm('Confirma exclusão do especialista?')) return;
       let specs = read(LS.ESP); const sp = specs.find(s => s.id === id);
+      try{
+        const dbId = sp && (sp._dbId || (typeof sp.id === 'string' && sp.id.startsWith('db_') ? sp.id.replace(/^db_/, '') : null));
+        if(dbId){ await apiDelete('/api/medicos/' + dbId); }
+      }catch(e){ console.warn('Delete especialista failed', e); }
       specs = specs.filter(s => s.id !== id); write(LS.ESP, specs);
       addHistory('especialista','Gestor',`Especialista excluído: ${sp ? sp.nome : id}`, { especialista: sp });
       renderVagasPanel(); renderEspecialistasGrid(); renderAgendamentosTable(); renderHistoricoList(); alert('Especialista excluído.');
@@ -1190,7 +1382,7 @@
       btn.onclick = () => updatePaciente(id);
     }
 
-    function updatePaciente(id){
+    async function updatePaciente(id){
       const nome = document.getElementById('pacNome').value.trim();
       const nasc = document.getElementById('pacNascimento').value;
       const cpf = document.getElementById('pacCpf').value.replace(/\D/g,'');
@@ -1205,17 +1397,33 @@
       const before = Object.assign({}, pacs[idx]);
       pacs[idx].nome = nome; pacs[idx].nascimento = nasc; pacs[idx].cpf = cpf; pacs[idx].sus = sus; pacs[idx].bairro = bairroObj.bairro; pacs[idx].setor = bairroObj.setor;
       write(LS.PAC, pacs); addHistory('paciente','Gestor',`Paciente editado: ${nome}`, { before, after: pacs[idx] });
+
+      // If this patient exists in DB, propagate update
+      try{
+        const p = pacs[idx];
+        const dbId = p._dbId || (typeof p.id === 'string' && p.id.startsWith('db_') ? p.id.replace(/^db_/, '') : null);
+        if(dbId){
+          const payload = { nome: p.nome || '', cpf: p.cpf || '', data_nascimento: p.nascimento || null, cartao_sus: p.sus || null, observacoes: JSON.stringify({ setor: p.setor, bairro: p.bairro }) };
+          await apiPut('/api/pacientes/' + dbId, payload);
+        }
+      }catch(e){ console.warn('Paciente update sync failed', e); }
+
       document.getElementById('formPaciente').reset(); document.getElementById('btnSavePaciente').textContent = 'Cadastrar'; 
       document.getElementById('btnSavePaciente').onclick = null;
       bindPacienteSaveDefault();
       renderPacientesTable(); alert('Paciente atualizado.');
     }
 
-    function deletePaciente(id){
+    async function deletePaciente(id){
       if(!confirm('Confirma exclusão do paciente? Esta ação também removerá possíveis agendamentos relacionados.')) return;
       let pacs = read(LS.PAC); const p = pacs.find(x => x.id === id);
+      // attempt server delete if present
+      try{
+        const dbId = p && (p._dbId || (typeof p.id === 'string' && p.id.startsWith('db_') ? p.id.replace(/^db_/, '') : null));
+        if(dbId){ await apiDelete('/api/pacientes/' + dbId); }
+      }catch(e){ console.warn('Paciente delete failed', e); }
       pacs = pacs.filter(x => x.id !== id); write(LS.PAC, pacs);
-      let ags = read(LS.AG); ags = ags.filter(a => a.pacienteCpf !== p.cpf); write(LS.AG, ags);
+      let ags = read(LS.AG); ags = ags.filter(a => a.pacienteCpf !== (p ? p.cpf : '')); write(LS.AG, ags);
       addHistory('paciente','Gestor',`Paciente excluído: ${p ? p.nome : id}`, { paciente: p });
       renderPacientesTable(); renderAgendamentosTable(); renderHistoricoList(); alert('Paciente excluído.');
     }
@@ -1278,6 +1486,16 @@
       cfg.telefone = telefone || cfg.telefone || '';
       cfg.setor = setor || cfg.setor || '';
       localStorage.setItem(LS.CFG, JSON.stringify(cfg));
+      // Also attempt to save to server so other browsers (IE) can read the same data
+      (async ()=>{
+        const payload = { nome_clinica: cfg.nomeClinica, endereco: cfg.endereco, telefone: cfg.telefone, senha_mestre: cfg.masterHash || null };
+        const saved = await apiSaveGestor(payload);
+        if(!saved){
+          console.warn('Não foi possível salvar configurações no servidor.');
+        } else {
+          console.log('Configurações sincronizadas com o servidor:', saved);
+        }
+      })();
       addHistory('config','Gestor','Configurações alteradas', { config: cfg });
       renderClinicContact(); alert('Configurações salvas. Senha Mestre criada/atualizada se fornecida.'); document.getElementById('cfgMaster').value = '';
     })
@@ -1290,11 +1508,27 @@
       const hash = await hashPasswordHex(password);
       if(hash !== cfg.masterHash){ alert('Senha Mestre incorreta. Ação cancelada.'); return; }
       if(!confirm('Última confirmação: esta ação irá apagar TODOS os dados do sistema e não poderá ser desfeita. Deseja continuar?')) return;
+      
+      // First: clear database on server
+      try {
+        console.log('Limpando banco de dados no servidor...');
+        const resetRes = await apiPost('/api/reset', { confirm: true });
+        if (resetRes && resetRes.success) {
+          console.log('Banco de dados limpo com sucesso.');
+        } else {
+          console.warn('Aviso: banco de dados pode não ter sido completamente limpo.');
+        }
+      } catch (e) {
+        console.warn('Erro ao limpar banco de dados:', e);
+      }
+      
+      // Second: clear localStorage
       localStorage.removeItem(LS.ESP); localStorage.removeItem(LS.PAC); localStorage.removeItem(LS.AG); localStorage.removeItem(LS.HIST); localStorage.removeItem(LS.COM);
+      localStorage.removeItem('sync_queue_v1'); // also clear sync queue
       // limpar config por completo (sem dados padrão)
       localStorage.setItem(LS.CFG, JSON.stringify({ nomeClinica:'', endereco:'', telefone:'', setor:'', masterHash: null }));
       closeRedefineModal();
-      alert('Sistema redefinido com sucesso. A página será recarregada.');
+      alert('Sistema redefinido com sucesso. Banco de dados e localStorage foram limpos. A página será recarregada.');
       location.reload();
     })
 
@@ -1357,101 +1591,151 @@
     document.getElementById('btnAplicarHist').addEventListener('click', renderHistoricoList);
     document.getElementById('btnLimparHist').addEventListener('click', ()=> { document.getElementById('histTipo').value=''; 
     document.getElementById('histDataInicio').value=''; document.getElementById('histDataFim').value=''; renderHistoricoList(); });
-    async function boot(){
-      await loadServerStorage();
-      initDefaultsIfEmpty();
-      renderClinicContact(); populateBairros(); applyMasks(); showPage('dashboard');
-
-      // Inicializar sincronização offline/online (cria SyncManager apenas se disponível)
-      try {
-        if (typeof SyncManager !== 'undefined') {
-          window.syncManager = new SyncManager();
-        } else {
-          window.syncManager = null;
-          console.warn('sync.js não encontrado: usando fallback navigator.onLine para o indicador.');
-        }
-      } catch(e){
-        window.syncManager = null;
-        console.warn('Falha ao instanciar SyncManager:', e && e.message);
-      }
-
-      // Atualizar indicador de sincronização (SyncManager primário, mas com fallback para navigator.onLine)
-      updateSyncUI();
-      // eventos emitidos pelo SyncManager (se existir)
-      try {
-        if(window.syncManager && window.syncManager.syncManager && window.syncManager.syncManager.addEventListener){
-          window.syncManager.syncManager.addEventListener('online', () => updateSyncUI());
-          window.syncManager.syncManager.addEventListener('offline', () => updateSyncUI());
-        }
-      } catch(e){}
-      // fallback para eventos de conectividade do navegador
-      window.addEventListener('online', updateSyncUI);
-      window.addEventListener('offline', updateSyncUI);
-
-      // Botão de sincronização manual
-      const syncBtn = document.getElementById('sync-button');
-      if(syncBtn) syncBtn.addEventListener('click', () => {
-        if (window.syncManager && typeof window.syncManager.forceSync === 'function') {
-          window.syncManager.forceSync();
-        } else {
-          alert('Sincronização manual não disponível no momento.');
-        }
-        updateSyncUI();
-      });
+    function initWebSocket(){
+      try{
+        const proto = (location.protocol === 'https:') ? 'wss' : 'ws';
+        const ws = new WebSocket(proto + '://' + location.host + '/ws');
+        ws.addEventListener('open', ()=> console.log('WS conectado'));
+        ws.addEventListener('message', (ev)=>{
+          try{
+            const msg = JSON.parse(ev.data);
+            if(msg.type === 'init' && Array.isArray(msg.gestores) && msg.gestores.length){
+              const s = msg.gestores[0];
+              const cfgRaw = localStorage.getItem(LS.CFG) || '{}';
+              const cfg = cfgRaw ? JSON.parse(cfgRaw) : {};
+              cfg.nomeClinica = s.nome_clinica || cfg.nomeClinica || '';
+              cfg.endereco = s.endereco || cfg.endereco || '';
+              cfg.telefone = s.telefone || cfg.telefone || '';
+              localStorage.setItem(LS.CFG, JSON.stringify(cfg));
+              renderClinicContact();
+            } else if(msg.type === 'gestor_update' && msg.payload){
+              const s = msg.payload;
+              const cfgRaw = localStorage.getItem(LS.CFG) || '{}';
+              const cfg = cfgRaw ? JSON.parse(cfgRaw) : {};
+              cfg.nomeClinica = s.nome_clinica || cfg.nomeClinica || '';
+              cfg.endereco = s.endereco || cfg.endereco || '';
+              cfg.telefone = s.telefone || cfg.telefone || '';
+              localStorage.setItem(LS.CFG, JSON.stringify(cfg));
+              renderClinicContact();
+              try{ if(window !== window.top) {} }catch(e){}
+            }
+          }catch(e){ console.warn('WS message parse error', e); }
+        });
+        ws.addEventListener('close', ()=> console.log('WS desconectado'));
+        ws.addEventListener('error', (e)=> console.warn('WS erro', e));
+        window._wsGestor = ws;
+      }catch(e){ console.warn('WebSocket não disponível', e); }
     }
 
-    // Atualizar label do conselho conforme especialidade
-    document.getElementById('espEspecialidade').addEventListener('change', (e) => {
-      const label = document.getElementById('conselhoLabel');
-      const especialidade = e.target.value;
-      const conselhos = {
-        'Médico': 'CRM (Conselho Regional de Medicina)',
-        'Dentista': 'CRO (Conselho Regional de Odontologia)',
-        'Psicólogo': 'CRP (Conselho Regional de Psicologia)',
-        'Nutricionista': 'CRN (Conselho Regional de Nutrição)',
-        'Fonoaudiólogo': 'Crefono (Conselho Regional de Fonoaudiologia)',
-        'Médico Veterinário': 'CRMV (Conselho Regional de Medicina Veterinária)',
-        'Fisioterapeuta': 'Crefito (Conselho Regional de Fisioterapia)',
-        'Terapeuta Ocupacional': 'Crefito (Conselho Regional de Terapia Ocupacional)',
-        'Outro': 'Conselho Regional'
-      };
-      label.textContent = conselhos[especialidade] || 'Conselho Regional';
-    });
-
-  window.addEventListener('DOMContentLoaded', () => { boot().catch(err => { console.error('Erro no boot:', err); boot(); }); });
-    // Função para atualizar a UI de sincronização
-    function updateSyncUI() {
-      const dot = document.getElementById('sync-dot');
-      const text = document.getElementById('sync-text');
-      if(!dot || !text) return;
-
-      // Considera online se o SyncManager disser que está online OU se o navegador estiver online (fallback)
-      const syncMgrOnline = (window.syncManager && typeof window.syncManager.isOnline !== 'undefined') ? !!window.syncManager.isOnline : false;
-      const online = (typeof FORCE_USE_NAV_ONLINE !== 'undefined' && FORCE_USE_NAV_ONLINE) ? navigator.onLine : (syncMgrOnline || navigator.onLine);
-
-      if (online) {
-        dot.classList.add('online');
-        text.textContent = 'Online';
-      } else {
-        dot.classList.remove('online');
-        text.textContent = 'Offline';
-      }
-    }
-
+    async function boot(){ initDefaultsIfEmpty(); await loadConfigFromServer(); initWebSocket(); renderClinicContact(); populateBairros(); applyMasks(); showPage('dashboard'); }
+    window.addEventListener('DOMContentLoaded', boot);
     window._app = { read, write, LS, genId, generateSlots, findEarliestSlotNextWeek, getAvailabilityForSpecialistOnDate };
-    // mobile menu toggle behavior (match usuario)
-    const mmBtn = document.getElementById('mobileMenuToggle');
-    if(mmBtn) mmBtn.addEventListener('click', function() {
-      const sidebar = document.getElementsByClassName('sidebar')[0];
-      if(sidebar) sidebar.classList.toggle('mobile-open');
-    });
-    document.querySelectorAll('.nav a').forEach(link => {
-      link.addEventListener('click', function() {
-        if (window.innerWidth <= 900) {
-          const sb = document.getElementsByClassName('sidebar')[0]; if(sb) sb.classList.remove('mobile-open');
+
+    // ===== INTERCEPTAR WRITE PARA SINCRONIZAR COM SERVIDOR =====
+    (function() {
+      console.log('📡 [SYNC] Inicializando interceptor...');
+      const originalWrite = write;
+      
+      // Sobrescreve a função global write
+      window.write = function(key, data) {
+        console.log('💾 [SYNC] write() interceptada - Key:', key);
+        
+        // Chama a original
+        originalWrite(key, data);
+        
+        // Depois sincroniza (assíncrono, sem await)
+        sincronizarComServidor(key, data).catch(e => console.error('❌ [SYNC] Erro na sync assíncrona:', e));
+      };
+      
+      console.log('✅ [SYNC] Interceptor ativado - write global sobrescrita');
+    })();
+
+    async function sincronizarComServidor(key, data) {
+      let endpoint = null;
+      if (key === 'db_especialistas_v3') endpoint = '/api/medicos';
+      else if (key === 'db_pacientes_v3') endpoint = '/api/pacientes';
+      else if (key === 'db_agendamentos_v3') endpoint = '/api/agendamentos';
+      else if (key === 'db_comunicados_v3') endpoint = '/api/comunicados';
+      
+      if (!endpoint) {
+        console.log(`⏸️ [SYNC] Chave não sincronizável: ${key}`);
+        return;
+      }
+      
+      console.log(`📤 [SYNC] Enviando ${data.length} itens para ${endpoint}`);
+      
+      if (Array.isArray(data)) {
+        for (let i = 0; i < data.length; i++) {
+          const item = data[i];
+          // Skip se já foi sincronizado ou já tem ID do banco
+          if (item._sent || item._dbId || item._synced) {
+            console.log(`⏸️ [SYNC] Item ${i} (${item.nome}) já sincronizado, pulando`);
+            continue;
+          }
+          
+          try {
+            const payload = mapearPayload(item, key);
+            console.log(`📤 [SYNC] POST item ${i} (${item.nome}):`, payload);
+            
+            const res = await fetch('http://localhost:3001' + endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            
+            if (res.ok) {
+              const resp = await res.json();
+              item._sent = true;
+              item._synced = true;
+              item._dbId = resp.id || resp.insertId;
+              console.log(`✅ [SYNC] Item ${i} (${item.nome}) sincronizado! ID: ${item._dbId}`);
+              console.log(`🔍 [DEBUG] Conteúdo após sync - item._synced=${item._synced}, item._dbId=${item._dbId}`);
+              // Atualiza localStorage DIRETAMENTE sem chamar write() para evitar loop
+              localStorage.setItem(key, JSON.stringify(data));
+              console.log(`💾 [DEBUG] LocalStorage atualizado com _synced e _dbId`);
+            } else {
+              const errText = await res.text();
+              console.error(`❌ [SYNC] Erro ${res.status}:`, errText);
+            }
+          } catch (e) {
+            console.error(`❌ [SYNC] Erro ao sincronizar item ${i}:`, e.message);
+          }
         }
-      });
-    });
+      }
+    }
+
+    function mapearPayload(item, key) {
+      if (key === 'db_especialistas_v3') {
+        return {
+          nome: item.nome || '',
+          especialidade: item.especialidade || '',
+          registro_profissional: item.crm || '',
+          tipo_conselho: ESPECIALIDADE_CONSELHO[item.especialidade] || ''
+        };
+      }
+      if (key === 'db_pacientes_v3') {
+        return {
+          nome: item.nome || '',
+          cpf: item.cpf || '',
+          cartao_sus: item.sus || ''
+        };
+      }
+      if (key === 'db_agendamentos_v3') {
+        return {
+          paciente_id: item.pacienteId,
+          medico_id: item.medicoId,
+          data: item.data,
+          hora: item.hora
+        };
+      }
+      if (key === 'db_comunicados_v3') {
+        return {
+          titulo: item.titulo || '',
+          corpo: item.mensagem || ''
+        };
+      }
+      return item;
+    }
 
   </script>
 </body>
