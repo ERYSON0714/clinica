@@ -416,7 +416,6 @@
       COM: 'db_comunicados_v1'
     };
 
-    // Mapeamento de especialidades para tipo de conselho
     const ESPECIALIDADE_CONSELHO = {
       'Clínico Geral': 'CRM',
       'Dentista': 'CRO',
@@ -430,9 +429,7 @@
       'Outro': ''
     };
     
-    // --- API helpers to sync config between browsers ---
     async function apiGetGestores(){
-      // Prefer fetch, but fallback to XHR for IE
       if(window.fetch){
         try{
           const res = await fetch('/api/gestores', { credentials: 'same-origin' });
@@ -457,7 +454,6 @@
       });
     }
 
-      // --- Sync queue and retry helpers ---
       function _getSyncQueue(){ try{ return JSON.parse(localStorage.getItem('sync_queue_v1')||'[]'); }catch(e){ return []; } }
       function _setSyncQueue(q){ try{ localStorage.setItem('sync_queue_v1', JSON.stringify(q)); }catch(e){} }
       function enqueueSync(item){ const q=_getSyncQueue(); q.push(item); _setSyncQueue(q); }
@@ -531,7 +527,6 @@
       date.setHours(0,0,0,0);
       return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`;
     }
-    // local read/write keep cache for UI, but we persist to DB via API calls
     async function apiGet(path){
       if(window.fetch){ try{ const r = await fetch(path); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
       return await new Promise((resolve)=>{
@@ -560,35 +555,22 @@
       });
     }
 
-    // read from local cache (localStorage) but return empty arrays as fallback
     function read(key){ try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e){ return []; } }
-
-    // write to local cache AND attempt to persist to server for key types we support
     function write(key, value){
       try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
-      // asynchronously sync to server for certain keys
       (async ()=>{
         try{
-          // Desabilitar temporariamente POST para /api/gestores por erro 500
-          // if(key === LS.CFG){
-          //   const cfg = value || {};
-          //   const payload = { nome_clinica: cfg.nomeClinica || '', endereco: cfg.endereco || '', telefone: cfg.telefone || '', senha_mestre: cfg.masterHash || null };
-          //   await apiPost('/api/gestores', payload);
-          // }
           if(key === LS.PAC){
-            // send any newly created patients (id starting with 'id_') to server
             const arr = Array.isArray(value) ? value : [];
             for(const p of arr){
               if(typeof p.id === 'string' && p.id.startsWith('id_')){
                 const payload = { nome: p.nome || '', cpf: p.cpf || '', data_nascimento: p.nascimento || null, senha_cadastro: p.senha || null, telefone: p.telefone || null, email: p.email || null, bairro_id: null, cartao_sus: p.sus || null, observacoes: JSON.stringify({ fromClient:true, meta: { setor: p.setor, bairro: p.bairro } }) };
                 const res = await apiPost('/api/pacientes', payload);
                 if(res && res.id){
-                  // keep DB id reference
                   p._dbId = res.id;
                 }
               }
             }
-            // persist updated cache after potential id replacements
             try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
           }
           if(key === LS.COM){
@@ -667,9 +649,7 @@
       if(!Array.isArray(read(LS.COM))) write(LS.COM, []);
     }
 
-    // load configuration from server (if any) and merge into localStorage CFG
     async function loadConfigFromServer(){
-      // load gestor/config
       const server = await apiGetGestores();
       if(server && server.length){
         const s = server[0];
@@ -682,7 +662,6 @@
         renderClinicContact();
       }
 
-      // try to fetch patients, medicos, comunicados and agendamentos and populate local cache
       try{
         const pacs = await apiGet('/api/pacientes');
         if(Array.isArray(pacs)){
@@ -1179,7 +1158,6 @@
               createdAt: nowISO()
             });
           }
-          // sync to server if this agendamento has DB id
           try{
             const dbId = ag._dbId || (typeof ag.id === 'string' && ag.id.startsWith('db_') ? ag.id.replace(/^db_/, '') : null);
             if(dbId){ await apiPut('/api/agendamentos/' + dbId, { status: 'Confirmado' }); }
@@ -1233,7 +1211,6 @@
               createdAt: nowISO()
             });
           }
-          // sync cancellation to server if possible
           try{
             const dbId = ag._dbId || (typeof ag.id === 'string' && ag.id.startsWith('db_') ? ag.id.replace(/^db_/, '') : null);
             if(dbId){ await apiPut('/api/agendamentos/' + dbId, { status: 'Cancelado', motivo_cancelamento: reason }); }
@@ -1322,11 +1299,9 @@
       document.querySelectorAll('.dayChk').forEach(ch => ch.checked = (sp.dias || []).includes(Number(ch.value)));
     }
 
-    // Atualizar conselho quando especialidade mudar (apenas prefixo)
     document.getElementById('espEspecialidade').addEventListener('change', (e)=>{
       const esp = e.target.value;
       const prefixo = ESPECIALIDADE_CONSELHO[esp] || '';
-      // Limpa o campo e mostra apenas o prefixo
       document.getElementById('espConselho').value = prefixo;
     });
 
@@ -1484,8 +1459,7 @@
       cfg.endereco = endereco || cfg.endereco || '';
       cfg.telefone = telefone || cfg.telefone || '';
       cfg.setor = setor || cfg.setor || '';
-      localStorage.setItem(LS.CFG, JSON.stringify(cfg));
-      // Also attempt to save to server so other browsers (IE) can read the same data
+      localStorage.setItem(LS.CFG, JSON.stringify(cfg))
       (async ()=>{
         const payload = { nome_clinica: cfg.nomeClinica, endereco: cfg.endereco, telefone: cfg.telefone, senha_mestre: cfg.masterHash || null };
         const saved = await apiSaveGestor(payload);
@@ -1508,7 +1482,6 @@
       if(hash !== cfg.masterHash){ alert('Senha Mestre incorreta. Ação cancelada.'); return; }
       if(!confirm('Última confirmação: esta ação irá apagar TODOS os dados do sistema e não poderá ser desfeita. Deseja continuar?')) return;
       
-      // First: clear database on server
       try {
         console.log('Limpando banco de dados no servidor...');
         const resetRes = await apiPost('/api/reset', { confirm: true });
@@ -1521,10 +1494,8 @@
         console.warn('Erro ao limpar banco de dados:', e);
       }
       
-      // Second: clear localStorage
       localStorage.removeItem(LS.ESP); localStorage.removeItem(LS.PAC); localStorage.removeItem(LS.AG); localStorage.removeItem(LS.HIST); localStorage.removeItem(LS.COM);
-      localStorage.removeItem('sync_queue_v1'); // also clear sync queue
-      // limpar config por completo (sem dados padrão)
+      localStorage.removeItem('sync_queue_v1'); 
       localStorage.setItem(LS.CFG, JSON.stringify({ nomeClinica:'', endereco:'', telefone:'', setor:'', masterHash: null }));
       closeRedefineModal();
       alert('Sistema redefinido com sucesso. Banco de dados e localStorage foram limpos. A página será recarregada.');
@@ -1630,19 +1601,14 @@
     window.addEventListener('DOMContentLoaded', boot);
     window._app = { read, write, LS, genId, generateSlots, findEarliestSlotNextWeek, getAvailabilityForSpecialistOnDate };
 
-    // ===== INTERCEPTAR WRITE PARA SINCRONIZAR COM SERVIDOR =====
     (function() {
       console.log('📡 [SYNC] Inicializando interceptor...');
       const originalWrite = write;
-      
-      // Sobrescreve a função global write
+    
       window.write = function(key, data) {
         console.log('💾 [SYNC] write() interceptada - Key:', key);
         
-        // Chama a original
         originalWrite(key, data);
-        
-        // Depois sincroniza (assíncrono, sem await)
         sincronizarComServidor(key, data).catch(e => console.error('❌ [SYNC] Erro na sync assíncrona:', e));
       };
       
@@ -1666,7 +1632,6 @@
       if (Array.isArray(data)) {
         for (let i = 0; i < data.length; i++) {
           const item = data[i];
-          // Skip se já foi sincronizado ou já tem ID do banco
           if (item._sent || item._dbId || item._synced) {
             console.log(`⏸️ [SYNC] Item ${i} (${item.nome}) já sincronizado, pulando`);
             continue;
@@ -1689,7 +1654,6 @@
               item._dbId = resp.id || resp.insertId;
               console.log(`✅ [SYNC] Item ${i} (${item.nome}) sincronizado! ID: ${item._dbId}`);
               console.log(`🔍 [DEBUG] Conteúdo após sync - item._synced=${item._synced}, item._dbId=${item._dbId}`);
-              // Atualiza localStorage DIRETAMENTE sem chamar write() para evitar loop
               localStorage.setItem(key, JSON.stringify(data));
               console.log(`💾 [DEBUG] LocalStorage atualizado com _synced e _dbId`);
             } else {
